@@ -1,0 +1,62 @@
+/* custom.css */
+
+/* :root seçicisi, tüm HTML belgesindeki 
+   ana değişkenleri tanımlar */
+:root {
+  
+  /* İstediğimiz renkler:
+    Turuncu: #FF8C00
+    Siyah: #171717
+    Lacivert: #000080
+    Beyaz: #FFFFFF
+  */
+
+  /* === ANA RENK: TURUNCU === */
+  /* HEX kodunu tanımlıyoruz */
+  --bs-primary: #FF8C00; 
+  --bs-bacground-primary: #202020;
+  /* Bootstrap'ın opaklık (alpha) kullanabilmesi için 
+     RGB versiyonunu da vermemiz şart (örn: .bg-primary-subtle) */
+  --bs-primary-rgb: 255, 140, 0;
+
+  /* Turuncu zemin üzerine hangi renk yazı iyi durur? Siyah. */
+  /* Bu ayar, .btn-primary gibi bileşenlerde metin rengini ayarlar */
+  --bs-primary-text-emphasis: #000000;
+  --bs-primary-btn-hover-bg: #d97800; /* Hover için biraz koyusu */
+  --bs-primary-btn-hover-border-color: #d97800;
+
+
+  /* === İKİNCİL RENK: SİYAH === */
+  --bs-secondary: #171717;
+  --bs-secondary-rgb: 23, 23, 23;
+  
+  /* Siyah zemin üzerine hangi renk yazı iyi durur? Beyaz. */
+  --bs-secondary-text-emphasis: #FFFFFF;
+  --bs-secondary-btn-hover-bg: #333333; /* Hover için biraz açığı */
+  --bs-secondary-btn-hover-border-color: #333333;
+
+
+  /* === ALTERNATİF RENK: LACİVERT (info sınıfını ezelim) === */
+  --bs-info: #000080;
+  --bs-info-rgb: 0, 0, 128;
+
+  /* Lacivert zemin üzerine hangi renk yazı iyi durur? Beyaz. */
+  --bs-info-text-emphasis: #FFFFFF;
+  --bs-info-btn-hover-bg: #0000A0; /* Hover için biraz açığı */
+  --bs-info-btn-hover-border-color: #0000A0;
+
+
+  /* === ALTERNATİF RENKLER: BEYAZ / GÖVDE === */
+  /* Zaten varsayılan budur ama garanti olsun: */
+  --bs-body-bg: #FFFFFF; /* Sayfa gövdesi beyaz */
+  --bs-body-color: #212529; /* Metinler koyu gri/siyah */
+
+  /* .bg-light sınıfını da beyaz yapabiliriz */
+  --bs-light: #FFFFFF;
+  --bs-light-rgb: 255, 255, 255;
+}
+
+.h-100vh {
+    /* Viewport Height (Görünüm Alanı Yüksekliği) */
+    min-height: 100vh; 
+}
