@@ -1,21 +1,22 @@
 <?php
 // PHP Kimlik Doğrulama (Authentication) Hizmeti - service/auth.php
 
-// ----------------------------------------------------------------
-// 1. KRİTİK DÜZELTME: SESSION PATH AYARI (YENİDEN EKLENDİ!)
-// ----------------------------------------------------------------
-// Bu ayar, oturumun sadece 'service' klasöründe değil, sitenin ana 
-// dizininde (/) ve tüm alt klasörlerde geçerli olmasını sağlar.
-session_set_cookie_params(0, '/'); 
-session_start();
+// Çıktı tamponlamayı başlat (Header hatalarını engeller)
+ob_start();
 
-// HATA AYIKLAMA MODU
+// Session başlatma kontrolü (Hata vermemesi için)
+if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params(0, '/'); 
+    session_start();
+}
+
+// Hata Raporlama
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 // ----------------------------------------------------------------
-// 1. Veritabanı Bağlantı Bilgileri
+// 1. Veritabanı Bağlantısı
 // ----------------------------------------------------------------
 $servername = "localhost";
 $db_username = "root"; 
@@ -36,9 +37,7 @@ function get_db_connection() {
 // ----------------------------------------------------------------
 // 2. AuthManager Class
 // ----------------------------------------------------------------
-
 class AuthManager {
-
     public static function register(array $data) {
         $conn = get_db_connection();
         
@@ -75,14 +74,13 @@ class AuthManager {
     public static function login($emailOrUsername, $password) {
         $conn = get_db_connection();
         
-        $login_query = $conn->prepare("SELECT KullaniciID, Ad, Eposta, SifreHash FROM Kullanicilar WHERE Eposta = ?");
-        $login_query->bind_param("s", $emailOrUsername); 
+        $login_query = $conn->prepare("SELECT KullaniciID, Ad, Eposta, SifreHash FROM Kullanicilar WHERE Eposta = ? OR Ad = ?");
+        $login_query->bind_param("ss", $emailOrUsername, $emailOrUsername); 
         $login_query->execute();
         $result = $login_query->get_result();
 
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
-            
             if (password_verify($password, $user['SifreHash'])) {
                 $login_query->close();
                 $conn->close();
@@ -100,24 +98,34 @@ class AuthManager {
 }
 
 // ----------------------------------------------------------------
-// 3. İşlem Yöneticisi
+// 3. KRİTİK DÜZELTME: SİHİRLİ KONTROL 🛡️
 // ----------------------------------------------------------------
+// Bu kod bloğu, auth.php SADECE doğrudan çağrıldığında çalışır.
+// userpage.php gibi dosyalar burayı "include" ettiğinde bu kısım ÇALIŞMAZ.
+// Böylece sonsuz döngü engellenir.
 
-if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-    // Eğer biri auth.php'ye direkt girmeye çalışırsa index'e at
-    header("Location: ../index.php"); 
-    exit();
+if (basename(__FILE__) == basename($_SERVER["SCRIPT_FILENAME"])) {
+
+    if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+        // Formdan gelmiyorsa ana sayfaya at
+        header("Location: ../view/index.php"); 
+        exit();
+    }
+
+    if (isset($_POST['username']) && isset($_POST['password']) && !isset($_POST['fullname'])) {
+        handle_login(); 
+    } elseif (isset($_POST['fullname']) && isset($_POST['email']) && isset($_POST['password'])) {
+        handle_register();
+    } else {
+        $_SESSION['error'] = "Geçersiz işlem talebi.";
+        header("Location: ../view/index.php");
+        exit();
+    }
 }
 
-if (isset($_POST['username']) && isset($_POST['password']) && !isset($_POST['fullname'])) {
-    handle_login(); 
-} elseif (isset($_POST['fullname']) && isset($_POST['email']) && isset($_POST['password'])) {
-    handle_register();
-} else {
-    $_SESSION['error'] = "Geçersiz işlem talebi.";
-    header("Location: ../index.php"); // HATA DÜZELTMESİ
-    exit();
-}
+// ----------------------------------------------------------------
+// 4. Yardımcı Fonksiyonlar
+// ----------------------------------------------------------------
 
 function handle_login() {
     $email_or_username = trim($_POST['username'] ?? ''); 
@@ -125,7 +133,7 @@ function handle_login() {
 
     if (empty($email_or_username) || empty($password)) {
         $_SESSION['error'] = "Lütfen e-posta ve şifreyi girin.";
-        header("Location: ../login.php"); // DÜZELTME: login.php yerine index.php
+        header("Location: ../view/login.php"); 
         exit();
     }
 
@@ -137,13 +145,11 @@ function handle_login() {
         $_SESSION['fullname'] = $user['fullname'];
         $_SESSION['success'] = "Hoş geldiniz, " . $user['fullname'] . "!";
         
-        // Başarılıysa View klasörüne git
         header("Location: ../view/userpage.php");
         exit();
     } else {
         $_SESSION['error'] = "E-posta veya şifre hatalı.";
-        
-        
+        header("Location: ../view/login.php");
         exit();
     }
 }
@@ -158,34 +164,29 @@ function handle_register() {
 
     if (empty($data['fullname']) || empty($data['email']) || empty($data['password']) || $data['password'] !== $data['confirm_password']) {
         $_SESSION['error'] = "Lütfen tüm alanları doldurun ve şifrelerin eşleştiğinden emin olun.";
-        header("Location: ../register.php");
+        header("Location: ../view/register.php");
         exit();
     }
 
     if (AuthManager::register($data)) {
-        
-        // 🚨 YENİ EKLENEN KISIM: OTOMATİK GİRİŞ İŞLEMİ
+        // Otomatik giriş yap
         $user = AuthManager::login($data['email'], $data['password']);
-
         if ($user) {
-            // Session'ı başlat ve userpage'e git
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['fullname'] = $user['fullname'];
-            $_SESSION['success'] = "Kayıt başarılı! Hoş geldiniz, " . $user['fullname'] . "!";
-
-            header("Location: ../view/userpage.php"); // Artık direkt buraya gidiyoruz!
+            $_SESSION['success'] = "Kayıt başarılı! Hoş geldiniz.";
+            
+            header("Location: ../view/userpage.php");
             exit();
         } else {
-            // Otomatik girişte beklenmeyen bir hata olursa, yine de login ekranına gönder.
-            $_SESSION['success'] = "Kayıt başarılı! Ancak otomatik girişte sorun oluştu. Lütfen şifrenizle giriş yapın.";
-            header("Location: ../index.php"); 
+            $_SESSION['success'] = "Kayıt başarılı. Lütfen giriş yapın.";
+            header("Location: ../view/login.php");
             exit();
         }
-        
     } else {
         $_SESSION['error'] = "Bu e-posta adresi zaten kullanımda.";
-        header("Location: ../register.php");
+        header("Location: ../view/register.php");
         exit();
     }
 }

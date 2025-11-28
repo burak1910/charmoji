@@ -1,17 +1,19 @@
-<?php 
-// Oturumu başlat
-session_start(); 
+<?php
+ob_start(); // Çıktı tamponlamayı başlatır (Hataları önler)
+session_set_cookie_params(0, '/'); // Cookie tüm sitede geçerli olsun
+session_start();
 
-// Eğer kullanıcı giriş yapmamışsa, login sayfasına yönlendir (Giriş zorunluysa)
-// Eğer herkesin görmesini istiyorsak, bu bloğu kaldırabiliriz.
-// Şimdilik, giriş yapanlara özel bir hoş geldiniz mesajı ile bırakalım:
+// Hata Raporlama
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
-$is_logged_in = isset($_SESSION['user_id']);
-$username = $is_logged_in ? ($_SESSION['username'] ?? 'Kullanıcı') : 'Misafir'; 
-
-// Başarı mesajını bir kez gösterip silelim
-$success_message = $_SESSION['success'] ?? null;
-unset($_SESSION['success']);
+// EĞER ZATEN GİRİŞ YAPILDIYSA USERPAGE'E GİT
+if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
+    header("Location: userpage.php");
+    exit();
+}
+// ----------------------------------------------------------------
+// BURADAN SONRA HTML KODLARIN BAŞLASIN
 ?>
 <!DOCTYPE html>
 <html lang="tr" class="scroll-smooth">
@@ -62,7 +64,7 @@ unset($_SESSION['success']);
                 Charmoji ile alışkanlıklarınızı yönetin. Modern, hızlı ve tamamen size özel çözümler.
             </p>
             <div class="d-flex justify-content-center gap-3">
-                <a href="kaydol.html" class="btn btn-primary btn-lg hero-btn-custom">
+                <a href="../service/register.php" class="btn btn-primary btn-lg hero-btn-custom">
                     Başlayalım
                 </a>
             </div>

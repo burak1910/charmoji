@@ -1,34 +1,35 @@
 <?php
 // service/FriendManager.php
 
-// Veritabanı bağlantısı için auth.php'yi çağırıyoruz.
-// Eğer auth.php aynı klasördeyse (service içindeyse):
+// Veritabanı bağlantısını çekiyoruz
 require_once __DIR__ . '/auth.php'; 
 
 class FriendManager {
 
     // 1. Arkadaşlık İsteği Gönder
-    public static function sendRequest($gonderenID, $aliciID) {
+    public static function sendRequest($myID, $targetID) {
         $conn = get_db_connection();
 
         // Kendine istek atamasın
-        if ($gonderenID == $aliciID) {
+        if ($myID == $targetID) {
             return "Kendini ekleyemezsin.";
         }
 
         // Zaten arkadaş mı veya istek var mı?
-        // Hem Gonderen->Alici hem de Alici->Gonderen kontrol edilmeli
+        // TABLO: Arkadaslar | SÜTUNLAR: GonderenID, AliciID
+        // SENİN TABLONDA ID sütunu 'ID' olarak geçiyor.
         $check = $conn->prepare("SELECT ID FROM Arkadaslar WHERE (GonderenID = ? AND AliciID = ?) OR (GonderenID = ? AND AliciID = ?)");
-        $check->bind_param("iiii", $gonderenID, $aliciID, $aliciID, $gonderenID);
+        $check->bind_param("iiii", $myID, $targetID, $targetID, $myID);
         $check->execute();
         
         if ($check->get_result()->num_rows > 0) {
             return "Zaten arkadaşsınız veya istek gönderilmiş.";
         }
 
-        // İsteği Kaydet (Durum varsayılan olarak 'Beklemede')
+        // İsteği Kaydet
+        // DİKKAT: Senin tablonda Durum sütunu ENUM. O yüzden '0' değil 'Beklemede' yazıyoruz.
         $stmt = $conn->prepare("INSERT INTO Arkadaslar (GonderenID, AliciID, Durum) VALUES (?, ?, 'Beklemede')");
-        $stmt->bind_param("ii", $gonderenID, $aliciID);
+        $stmt->bind_param("ii", $myID, $targetID);
         
         if ($stmt->execute()) {
             return true;
@@ -38,12 +39,14 @@ class FriendManager {
     }
 
     // 2. İsteği Kabul Et
-    public static function acceptRequest($istekID, $aliciID) {
+    public static function acceptRequest($istekID, $myID) {
         $conn = get_db_connection();
         
-        // Güvenlik: Sadece isteği alan kişi (AliciID) kabul edebilir
+        // Güvenlik: Sadece isteği alan kişi (AliciID) kabul edebilir.
+        // DİKKAT: Durum sütunu ENUM olduğu için '1' yerine 'Kabul' yazıyoruz.
+        // Tablodaki ID sütunu: ID
         $stmt = $conn->prepare("UPDATE Arkadaslar SET Durum = 'Kabul' WHERE ID = ? AND AliciID = ?");
-        $stmt->bind_param("ii", $istekID, $aliciID);
+        $stmt->bind_param("ii", $istekID, $myID);
         
         return $stmt->execute();
     }
@@ -63,8 +66,8 @@ class FriendManager {
     public static function getPendingRequests($myID) {
         $conn = get_db_connection();
         
-        // Arkadaslar tablosu ile Kullanicilar tablosunu birleştir (JOIN)
-        // İsteyen kişinin adını (Ad) öğrenmek için
+        // Durum = 'Beklemede' olanları çek (ENUM yapısına uygun)
+        // Frontend 'IstekID' beklediği için 'ID as IstekID' yapıyoruz.
         $sql = "SELECT A.ID as IstekID, K.Ad, K.Eposta 
                 FROM Arkadaslar A 
                 JOIN Kullanicilar K ON A.GonderenID = K.KullaniciID 
@@ -81,10 +84,7 @@ class FriendManager {
     public static function getFriends($myID) {
         $conn = get_db_connection();
         
-        // Arkadaşlık iki yönlüdür.
-        // Sen göndermiş olabilirsin (GonderenID = Sen) YA DA sana gelmiş olabilir (AliciID = Sen).
-        // Durumu 'Kabul' olanları çekiyoruz.
-        
+        // Durum = 'Kabul' olanları çek
         $sql = "SELECT K.Ad, K.Eposta, A.ID as ArkadaslikID
                 FROM Arkadaslar A
                 JOIN Kullanicilar K ON 
@@ -96,26 +96,31 @@ class FriendManager {
                   AND A.Durum = 'Kabul'";
 
         $stmt = $conn->prepare($sql);
-        // Sorguda 4 tane ? işareti var, hepsi benim ID'm
         $stmt->bind_param("iiii", $myID, $myID, $myID, $myID);
         $stmt->execute();
         
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
     
-    // 6. Kullanıcı Ara (Arkadaş eklemek için liste)
+    // 6. Kullanıcı Ara (Hem İsim Hem E-posta)
     public static function searchUsers($keyword, $myID) {
         $conn = get_db_connection();
         
-        // Kendim hariç diğer kullanıcıları getir
-        // Eğer arama kelimesi boşsa rastgele 5 kişi getir
         if (empty($keyword)) {
+            // Arama yoksa rastgele öner
             $stmt = $conn->prepare("SELECT KullaniciID, Ad, Eposta FROM Kullanicilar WHERE KullaniciID != ? ORDER BY RAND() LIMIT 5");
             $stmt->bind_param("i", $myID);
         } else {
+            // Arama varsa: İsim VEYA E-posta içinde ara
             $term = "%" . $keyword . "%";
-            $stmt = $conn->prepare("SELECT KullaniciID, Ad, Eposta FROM Kullanicilar WHERE Ad LIKE ? AND KullaniciID != ? LIMIT 10");
-            $stmt->bind_param("si", $term, $myID);
+            $stmt = $conn->prepare("
+                SELECT KullaniciID, Ad, Eposta 
+                FROM Kullanicilar 
+                WHERE (Ad LIKE ? OR Eposta LIKE ?) 
+                AND KullaniciID != ? 
+                LIMIT 20
+            ");
+            $stmt->bind_param("ssi", $term, $term, $myID);
         }
         
         $stmt->execute();
