@@ -60,3 +60,172 @@
     /* Viewport Height (Görünüm Alanı Yüksekliği) */
     min-height: 100vh; 
 }
+
+/* ---------------------------------------------------------------------- */
+/* 1. Global Değişkenler ve Bootstrap Override */
+/* ---------------------------------------------------------------------- */
+:root {
+    /* Bootstrap Primary Rengini Turuncu ile Değiştiriyoruz */
+    --bs-primary: #F97316;
+    --bs-primary-rgb: 249, 115, 22;
+    --bs-secondary: #10B981;
+    --bs-link-color: var(--bs-primary);
+    
+    /* Özel Renkler */
+    --primary-hover: #c2410c;
+    --text-muted-dark: #9CA3AF;
+    --bg-light-section: #F9FAFB; /* gray-50 */
+    --bg-dark-section: #1F2937; /* gray-800 */
+}
+
+/* ---------------------------------------------------------------------- */
+/* 2. Temel Stil ve Dark Mode */
+/* ---------------------------------------------------------------------- */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-light-section);
+    transition: background-color 0.3s, color 0.3s;
+    min-height: 100vh;
+}
+
+/* Dark Mode Temel Renkler */
+html.dark body {
+    background-color: #111827; /* dark:bg-gray-900 */
+    color: #F3F4F6; /* dark:text-gray-100 */
+}
+
+/* Navbar */
+.navbar-custom {
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    
+    border-bottom: 1px solid #E5E7EB;
+}
+html.dark .navbar-custom {
+    background-color: rgba(17, 24, 39, 0.8) !important;
+    border-bottom: 1px solid #374151;
+}
+.navbar-brand.logo {
+    font-weight: 700; 
+    letter-spacing: -0.05em; 
+}
+.mobile-btn-custom { 
+    color: #4B5563; /* text-gray-700 */
+}
+html.dark .mobile-btn-custom { 
+    color: #D1D5DB; /* text-gray-200 */
+}
+
+/* Dark Mode Toggle İkonları Yönetimi */
+.theme-toggle-btn-custom .light-icon { display: none; }
+html.dark .theme-toggle-btn-custom .dark-icon { display: none; }
+html.dark .theme-toggle-btn-custom .light-icon { display: block; }
+.theme-toggle-btn-custom:hover { background-color: #E5E7EB; }
+html.dark .theme-toggle-btn-custom:hover { background-color: #374151; }
+
+/* ---------------------------------------------------------------------- */
+/* 3. Hero Section ve Blob */
+/* ---------------------------------------------------------------------- */
+.hero {
+    padding-top: 4rem; /* Navbar yüksekliği için */
+}
+.hero h1 {
+    font-size: 2.5rem;
+}
+@media (min-width: 992px) { 
+    .hero h1 { font-size: 3.75rem; }
+}
+
+.text-gradient { 
+    background-image: linear-gradient(to right, var(--bs-primary), #A855F7);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.hero-btn-custom {
+    transition: transform 0.3s, box-shadow 0.3s;
+    box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.4), 0 4px 6px -4px rgba(249, 115, 22, 0.4);
+    border-radius: 0.5rem;
+}
+.hero-btn-custom:hover {
+    transform: translateY(-3px);
+}
+
+/* Blob Animation */
+.blob {
+    position: absolute;
+    filter: blur(40px);
+    z-index: -1;
+    opacity: 0.4;
+    border-radius: 9999px;
+    width: 16rem; 
+    height: 16rem; 
+    animation: move 10s infinite alternate;
+}
+.blob:nth-child(1) { background-color: #FDBA74; top: 0; left: 0; transform: translateX(-50%); } 
+.blob:nth-child(2) { background-color: #FCD34D; bottom: 0; right: 0; transform: translateX(50%); } 
+
+@keyframes move {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(20px, -20px) scale(1.1); }
+}
+
+/* ---------------------------------------------------------------------- */
+/* 4. Sections, Cards & Stats */
+/* ---------------------------------------------------------------------- */
+.features-section {
+    background-color: white;
+}
+html.dark .features-section {
+    background-color: var(--bg-dark-section); /* gray-800 */
+}
+.card-custom {
+    background-color: var(--bg-light-section);
+    border: 1px solid #E5E7EB;
+    border-radius: 0.75rem;
+}
+html.dark .card-custom {
+    background-color: #111827; /* gray-900 */
+    border: 1px solid #374151;
+}
+.hover-shadow:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1) !important;
+}
+.icon-wrapper {
+    width: 3rem; height: 3rem; 
+    border-radius: 0.5rem;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 1rem;
+    transition: transform 0.3s;
+}
+.icon-wrapper:hover { transform: scale(1.1); }
+
+/* Card Icon Colors (manuel renkler) */
+.bg-orange-light { background-color: #FFF7ED; }
+.bg-green-light { background-color: #D1FAE5; }
+.bg-pink-light { background-color: #FCE7F3; }
+.text-pink { color: #EC4899; }
+
+/* Stats Section */
+.stats-section {
+    background-color: var(--bs-primary) !important;
+}
+.text-orange-light-muted {
+    color: #FFDDAA; /* orange-100 */
+}
+.fs-7 {
+    font-size: 0.875rem !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* 5. Footer */
+/* ---------------------------------------------------------------------- */
+.footer-custom {
+    background-color: #111827; /* dark:bg-gray-900 */
+    color: #D1D5DB; /* gray-300 */
+}
+.footer-custom .text-muted {
+    color: #6B7280 !important; /* gray-500 */
+}
+.social-icon-custom:hover {
+    color: var(--bs-primary) !important;
+}
