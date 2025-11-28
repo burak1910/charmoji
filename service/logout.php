@@ -14,7 +14,7 @@ session_destroy();
 session_start();
 $_SESSION['success'] = "Başarıyla çıkış yaptınız. Tekrar bekleriz!";
 
-// 5. Giriş sayfasına (index.php) geri gönder
-header("Location: index.php");
+
+header("Location: /charmoji/view/index.php");
 exit();
 ?>
