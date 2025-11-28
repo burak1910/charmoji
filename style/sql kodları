@@ -1,0 +1,175 @@
+/*1. KULLANICILAR TABLOSU*/
+CREATE TABLE Kullanicilar (
+    KullaniciID INT IDENTITY(1,1) PRIMARY KEY,
+    Ad NVARCHAR(100) NOT NULL,
+    Eposta NVARCHAR(100) NOT NULL UNIQUE,
+    SifreHash VARCHAR(255) NOT NULL,
+    KayitTarihi DATETIME DEFAULT GETDATE(),
+
+    -- LEVEL SİSTEMİ
+    Seviye INT NOT NULL DEFAULT 1,
+    XP INT NOT NULL DEFAULT 0,
+
+    -- PARA
+    Bakiye DECIMAL(10,2) DEFAULT 0,
+
+    SonGorulme DATETIME DEFAULT GETDATE()
+);
+
+CREATE INDEX IX_Kullanicilar_Eposta ON Kullanicilar(Eposta);
+
+
+
+   /*2. ALIŞKANLIKLAR TABLOSU*/
+
+CREATE TABLE Aliskanliklar (
+    AliskanlikID INT IDENTITY(1,1) PRIMARY KEY,
+    Ad NVARCHAR(100) UNIQUE NOT NULL,
+    Aciklama NVARCHAR(MAX),
+    VarsayilanHedef NVARCHAR(50),
+    HedefTipi NVARCHAR(20)
+);
+
+
+
+  /* 3. KULLANICI ALIŞKANLIKLARI*/
+
+CREATE TABLE KullaniciAliskanliklari (
+    KullaniciAliskanlikID INT IDENTITY(1,1) PRIMARY KEY,
+    KullaniciID INT NOT NULL,
+    AliskanlikID INT NOT NULL,
+    OzelHedefDegeri NVARCHAR(50),
+    BaslangicTarihi DATE NOT NULL,
+    AktifMi BIT DEFAULT 1,
+
+    CONSTRAINT FK_KA_Kullanici FOREIGN KEY (KullaniciID)
+        REFERENCES Kullanicilar(KullaniciID) ON DELETE CASCADE,
+
+    CONSTRAINT FK_KA_Aliskanlik FOREIGN KEY (AliskanlikID)
+        REFERENCES Aliskanliklar(AliskanlikID) ON DELETE CASCADE,
+
+    CONSTRAINT UQ_Kullanici_Aliskanlik UNIQUE (KullaniciID, AliskanlikID)
+);
+
+CREATE INDEX IX_KA_KullaniciID ON KullaniciAliskanliklari(KullaniciID);
+CREATE INDEX IX_KA_AliskanlikID ON KullaniciAliskanliklari(AliskanlikID);
+
+
+
+   /*4. TAKİP KAYITLARI*/
+CREATE TABLE TakipKayitlari (
+    KayitID INT IDENTITY(1,1) PRIMARY KEY,
+    KullaniciAliskanlikID INT NOT NULL,
+    Tarih DATE NOT NULL,
+    GerceklesenDeger DECIMAL(10,2),
+    TamamlandiMi BIT NOT NULL,
+
+    CONSTRAINT FK_TK_KA FOREIGN KEY (KullaniciAliskanlikID)
+        REFERENCES KullaniciAliskanliklari(KullaniciAliskanlikID) ON DELETE CASCADE,
+
+    CONSTRAINT UQ_Takip UNIQUE (KullaniciAliskanlikID, Tarih)
+);
+
+CREATE INDEX IX_TK_KAID ON TakipKayitlari(KullaniciAliskanlikID);
+
+
+
+   /*5. ARKADAŞLIK TABLOSU*/
+CREATE TABLE Arkadasliklar (
+    ArkadaslikID INT IDENTITY(1,1) PRIMARY KEY,
+    IstekGonderenID INT NOT NULL,
+    IstekAlanID INT NOT NULL,
+    Durum TINYINT DEFAULT 0,
+    OlusturmaTarihi DATETIME DEFAULT GETDATE(),
+
+    CONSTRAINT FK_Ark_Gonderen FOREIGN KEY (IstekGonderenID)
+        REFERENCES Kullanicilar(KullaniciID),
+
+    CONSTRAINT FK_Ark_Alan FOREIGN KEY (IstekAlanID)
+        REFERENCES Kullanicilar(KullaniciID),
+
+    CONSTRAINT UQ_Arkadaslik UNIQUE (IstekGonderenID, IstekAlanID),
+    CONSTRAINT CHK_Arkadaslik_Self CHECK (IstekGonderenID <> IstekAlanID)
+);
+
+CREATE INDEX IX_Ark_Gonderen ON Arkadasliklar(IstekGonderenID);
+CREATE INDEX IX_Ark_Alan ON Arkadasliklar(IstekAlanID);
+
+
+
+  /* 6. MARKET EŞYALARI*/
+CREATE TABLE MarketEsyalari (
+    EsyaID INT IDENTITY(1,1) PRIMARY KEY,
+    Ad NVARCHAR(100) NOT NULL,
+    Aciklama NVARCHAR(255),
+    Fiyat DECIMAL(10,2) NOT NULL,
+    GorselURL NVARCHAR(255),
+    EsyaTuru NVARCHAR(50),
+
+    -- LEVEL GEREKSİNİMİ
+    GerekenSeviye INT DEFAULT 1
+);
+
+CREATE INDEX IX_Market_Level ON MarketEsyalari(GerekenSeviye);
+CREATE INDEX IX_Market_Tur ON MarketEsyalari(EsyaTuru);
+
+
+
+
+  /* 7. KULLANICI ENVANTERİ*/
+CREATE TABLE KullaniciEnvanteri (
+    EnvanterID INT IDENTITY(1,1) PRIMARY KEY,
+    KullaniciID INT NOT NULL,
+    EsyaID INT NOT NULL,
+    AlimTarihi DATETIME DEFAULT GETDATE(),
+    KusandiMi BIT DEFAULT 0,
+
+    CONSTRAINT FK_Env_Kullanici FOREIGN KEY (KullaniciID)
+        REFERENCES Kullanicilar(KullaniciID) ON DELETE CASCADE,
+
+    CONSTRAINT FK_Env_Esya FOREIGN KEY (EsyaID)
+        REFERENCES MarketEsyalari(EsyaID) ON DELETE CASCADE,
+
+    CONSTRAINT UQ_Envanter UNIQUE (KullaniciID, EsyaID)
+);
+
+CREATE INDEX IX_Env_Kullanici ON KullaniciEnvanteri(KullaniciID);
+
+
+
+
+ /* 8. GÖREV TANIMLARI (Admin)*/
+
+CREATE TABLE GorevTanimlari (
+    GorevTanimID INT IDENTITY(1,1) PRIMARY KEY,
+    Aciklama NVARCHAR(255) NOT NULL,
+
+    OdulPara DECIMAL(10,2) DEFAULT 0,
+    OdulXP INT DEFAULT 0,
+
+    HedefSayi INT DEFAULT 1
+);
+
+
+  /* 9. KULLANICI GÜNLÜK GÖREVLERİ*/
+
+CREATE TABLE KullaniciGunlukGorevleri (
+    KullaniciGorevID INT IDENTITY(1,1) PRIMARY KEY,
+    KullaniciID INT NOT NULL,
+    GorevTanimID INT NOT NULL,
+    Tarih DATE DEFAULT GETDATE(),
+    MevcutIlerleme INT DEFAULT 0,
+    TamamlandiMi BIT DEFAULT 0,
+    OdulAlindiMi BIT DEFAULT 0,
+
+    CONSTRAINT FK_KGG_Kullanici FOREIGN KEY (KullaniciID)
+        REFERENCES Kullanicilar(KullaniciID) ON DELETE CASCADE,
+
+    CONSTRAINT FK_KGG_Tanim FOREIGN KEY (GorevTanimID)
+        REFERENCES GorevTanimlari(GorevTanimID) ON DELETE CASCADE,
+
+    CONSTRAINT UQ_KGG UNIQUE (KullaniciID, GorevTanimID, Tarih)
+);
+
+CREATE INDEX IX_KGG_Kullanici ON KullaniciGunlukGorevleri(KullaniciID);
+CREATE INDEX IX_KGG_Gorev ON KullaniciGunlukGorevleri(GorevTanimID);
