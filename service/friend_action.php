@@ -10,7 +10,7 @@ session_start();
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-// FriendManager'ı dahil et (Aynı klasörde oldukları için __DIR__)
+// FriendManager'ı dahil et
 require_once __DIR__ . '/FriendManager.php';
 
 if (!isset($_SESSION['user_id'])) {
@@ -18,6 +18,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $myID = $_SESSION['user_id'];
+// İşlem bitince dönülecek yer
 $redirectPath = "../view/userpage.php";
 
 // 1. Arkadaş Ekleme
@@ -42,7 +43,18 @@ elseif (isset($_POST['accept_request_id'])) {
     }
 }
 
-// 3. Silme / Reddetme
+// 3. İsteği Reddetme (YENİ EKLENEN KISIM) ❌
+elseif (isset($_POST['reject_request_id'])) {
+    $reqID = intval($_POST['reject_request_id']);
+    // Reddetmek aslında o isteği veritabanından silmektir
+    if (FriendManager::removeFriend($reqID)) {
+        $_SESSION['success'] = "Arkadaşlık isteği reddedildi.";
+    } else {
+        $_SESSION['error'] = "İşlem başarısız.";
+    }
+}
+
+// 4. Arkadaş Silme
 elseif (isset($_POST['remove_id'])) {
     $reqID = intval($_POST['remove_id']);
     if (FriendManager::removeFriend($reqID)) {

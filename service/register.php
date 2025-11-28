@@ -35,7 +35,7 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
                     },
                     colors: {
                         primary: {
-                            DEFAULT: '#F97316',
+                            DEFAULT: '#F97316', // Senin Turuncu rengin
                             hover: '#ea580c',
                         },
                         dark: {
@@ -62,19 +62,14 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
     </script>
 
     <style>
-        /* Blob Efekti */
         .blob-bg {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             overflow: hidden; z-index: 0; pointer-events: none;
         }
         .blob {
-            position: absolute;
-            width: 300px; height: 300px;
+            position: absolute; width: 300px; height: 300px;
             background: linear-gradient(180deg, rgba(249,115,22,0.4) 0%, rgba(168,85,247,0.4) 100%);
-            border-radius: 50%;
-            filter: blur(40px);
-            opacity: 0.6;
+            border-radius: 50%; filter: blur(40px); opacity: 0.6;
             animation: blob 10s infinite alternate;
         }
         .blob-1 { top: 5%; left: 10%; animation-delay: 0s; }
@@ -86,8 +81,9 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
     <nav class="fixed top-0 w-full z-50 bg-white/80 dark:bg-dark-bg/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
-                <a href="index.php" class="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
-                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                
+                <a href="../view/index.php" class="flex items-center gap-2 text-sm font-bold text-primary hover:text-primary-hover transition-colors">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
                     <span>Ana Sayfa</span>
                 </a>
 
@@ -130,7 +126,7 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
                         </div>
                         <input type="text" id="fullname" name="fullname" required 
                             class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-dark-input text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-sm"
-                            placeholder="Adınız Soyadınız">
+                            placeholder="Kullanıcı Adınız">
                     </div>
                 </div>
 
@@ -191,7 +187,6 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
 
     <script>
         lucide.createIcons();
-
         const themeToggle = document.getElementById('theme-toggle');
         const html = document.documentElement;
 

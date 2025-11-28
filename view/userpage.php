@@ -14,7 +14,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     exit();
 }
 
-// 2. ARAMA TERİMİNİ YAKALA (YENİ)
+// 2. ARAMA TERİMİNİ YAKALA
 $searchQuery = isset($_GET['q']) ? trim($_GET['q']) : "";
 
 // VARSAYILAN DEĞERLER
@@ -35,7 +35,7 @@ if (file_exists($managerPath)) {
             $bekleyenIstekler = FriendManager::getPendingRequests($myID) ?? [];
             $arkadaslarim = FriendManager::getFriends($myID) ?? [];
             
-            // ARAMA SORGUSUNU BURAYA GÖNDERİYORUZ (GÜNCELLENDİ)
+            // Arama sorgusunu gönder
             $baskaKullanicilar = FriendManager::searchUsers($searchQuery, $myID) ?? [];
         } else {
             $hataMesaji = "FriendManager sınıfı bulunamadı!";
@@ -123,12 +123,23 @@ if (file_exists($managerPath)) {
                                         </div>
                                         <span class="fw-medium"><?= htmlspecialchars($istek['Ad']) ?></span>
                                     </div>
-                                    <form action="../service/friend_action.php" method="POST" class="m-0">
-                                        <input type="hidden" name="accept_request_id" value="<?= $istek['IstekID'] ?>">
-                                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">
-                                            <i data-lucide="check" class="w-4 h-4"></i>
-                                        </button>
-                                    </form>
+                                    
+                                    <div class="d-flex gap-2">
+                                        <form action="../service/friend_action.php" method="POST" class="m-0">
+                                            <input type="hidden" name="accept_request_id" value="<?= $istek['IstekID'] ?>">
+                                            <button type="submit" class="btn btn-sm btn-success rounded-pill px-3" title="Kabul Et">
+                                                <i data-lucide="check" class="w-4 h-4"></i>
+                                            </button>
+                                        </form>
+
+                                        <form action="../service/friend_action.php" method="POST" class="m-0">
+                                            <input type="hidden" name="reject_request_id" value="<?= $istek['IstekID'] ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Reddet">
+                                                <i data-lucide="x" class="w-4 h-4"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+
                                 </li>
                             <?php endforeach; ?>
                         <?php else: ?>
@@ -173,6 +184,7 @@ if (file_exists($managerPath)) {
                     </ul>
                 </div>
             </div>
+            
             <div class="col-md-4">
                 <div class="card card-custom h-100 shadow-sm border-0">
                     <div class="card-header bg-transparent border-bottom border-secondary border-opacity-10">

@@ -95,10 +95,11 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
     <nav class="fixed top-0 w-full z-50 bg-white/80 dark:bg-dark-bg/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
-                <a href="index.php" class="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
-                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                <a href="../view/index.php" class="flex items-center gap-2 text-sm font-bold text-primary hover:text-primary-hover transition-colors">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
                     <span>Ana Sayfa</span>
                 </a>
+
 
                 <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary">
                     <i data-lucide="moon" class="w-5 h-5 hidden dark:block text-gray-300"></i>
