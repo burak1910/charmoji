@@ -1,173 +1,221 @@
-<?php
-ob_start(); // Çıktı tamponlamayı başlatır (Hataları önler)
-session_set_cookie_params(0, '/'); // Cookie tüm sitede geçerli olsun
-session_start();
-
-// Hata Raporlama
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
-// EĞER ZATEN GİRİŞ YAPILDIYSA USERPAGE'E GİT
-if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
-    header("Location: userpage.php");
-    exit();
-}
-// ----------------------------------------------------------------
-// BURADAN SONRA HTML KODLARIN BAŞLASIN
-?>
 <!DOCTYPE html>
 <html lang="tr" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Charmoji - Ana Sayfa</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link rel="stylesheet" href="style.css">
+    
+    <link rel="icon" type="image/png" href="charmoji.png"> 
+
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Karanlık mod sınıf bazlı çalışsın
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    // Özel renk tanımlamaları (Turuncu tema)
+                    colors: {
+                        primary: '#F97316', 
+                        primaryHover: '#c2410c', 
+                        secondary: '#10B981', 
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Kaydırma çubuğu (Scrollbar) özelleştirmesi */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        /* Hero bölümündeki hareketli balon animasyonu */
+        .blob {
+            position: absolute;
+            filter: blur(40px);
+            z-index: -1;
+            opacity: 0.4;
+            animation: move 10s infinite alternate;
+        }
+        @keyframes move {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(20px, -20px) scale(1.1); }
+        }
+    </style>
 </head>
-<body class="body-base">
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300">
 
-    <nav class="navbar navbar-expand-md fixed-top navbar-custom">
-        <div class="container px-4 px-sm-5 px-lg-4">
-            <a class="navbar-brand logo text-primary" href="#" onclick="window.scrollTo(0,0)">CHARMOJİ</a>
-            
-            <button class="navbar-toggler p-2 border-0 mobile-btn-custom" type="button" id="mobile-menu-btn" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Menüyü Aç/Kapa">
-                <i data-lucide="menu" class="w-6 h-6"></i>
-            </button>
+    <nav class="fixed w-full z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                
+                <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" onclick="window.scrollTo(0,0)">
+                    <img src="charmoji.png" alt="Charmoji Logo" class="w-12 h-12"> <div class="font-bold text-2xl text-primary tracking-tighter">CHARMOJİ</div> 
+                </div>
+                
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-center space-x-4">
+                        <a href="giris.html" class="px-5 py-2 text-sm font-medium rounded-lg text-white bg-primary hover:bg-primaryHover transition shadow-md hover:shadow-orange-500/30">
+                            Giriş Yap
+                        </a>
+                        
+                        <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                            <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
+                            <i data-lucide="sun" class="w-5 h-5 hidden dark:block text-yellow-400"></i>
+                        </button>
+                    </div>
+                </div>
 
-            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <div class="d-flex align-items-center space-x-4 ml-md-3">
-                    <a href="giris.html" class="btn btn-primary btn-sm nav-btn-custom">
-                        Giriş Yap
-                    </a>
-                    
-                    <button id="theme-toggle" class="p-2 rounded-circle theme-toggle-btn-custom">
-                        <i data-lucide="moon" class="w-5 h-5 dark-icon"></i>
-                        <i data-lucide="sun" class="w-5 h-5 light-icon text-warning"></i>
+                <div class="-mr-2 flex md:hidden">
+                    <button id="mobile-menu-btn" class="inline-flex items-center justify-center p-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
                     </button>
                 </div>
             </div>
         </div>
+
+        <div id="mobile-menu" class="hidden md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="giris.php" class="block text-center w-full px-5 py-3 rounded-md text-base font-medium text-white bg-primary hover:bg-primaryHover">
+                    Giriş Yap
+                </a>
+            </div>
+        </div>
     </nav>
+    <section id="hero" class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+        <div class="blob bg-orange-300 w-64 h-64 rounded-full top-0 left-0 -translate-x-1/2"></div>
+        <div class="blob bg-yellow-300 w-64 h-64 rounded-full bottom-0 right-0 translate-x-1/2"></div>
 
-    <section id="hero" class="hero text-center pt-5 pb-5 overflow-hidden position-relative">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-
-        <div class="container position-relative z-1" style="padding-top: 5rem; padding-bottom: 5rem;">
-            <h1 class="display-3 fw-bold mb-3 tracking-tight">
-                Geleceği <span class="text-gradient">Kodluyoruz</span>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
+                Geleceği <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-yellow-500">Kodluyoruz</span>
             </h1>
-            <p class="lead text-muted mx-auto mb-4" style="max-width: 42rem;">
+            <p class="mt-4 max-w-2xl mx-auto text-xl text-gray-500 dark:text-gray-400">
                 Charmoji ile alışkanlıklarınızı yönetin. Modern, hızlı ve tamamen size özel çözümler.
             </p>
-            <div class="d-flex justify-content-center gap-3">
-                <a href="../service/register.php" class="btn btn-primary btn-lg hero-btn-custom">
+            <div class="mt-8 flex justify-center gap-4">
+                <a href="kaydol.html" class="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-primary hover:bg-primaryHover md:text-lg md:px-10 shadow-xl shadow-orange-500/40 transition hover:-translate-y-1">
                     Başlayalım
                 </a>
             </div>
         </div>
     </section>
 
-    <section id="features" class="py-5 features-section">
-        <div class="container">
-            <div class="text-center mb-5">
-                <h2 class="text-primary fw-semibold text-uppercase fs-6">Hizmetlerimiz</h2>
-                <p class="display-6 fw-bold mt-2">Neden Charmoji?</p>
+
+    <section id="features" class="py-20 bg-white dark:bg-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-base text-primary font-semibold tracking-wide uppercase">Hizmetlerimiz</h2>
+                <p class="mt-2 text-3xl leading-8 font-extrabold tracking-tight sm:text-4xl">
+                    Neden Mi Charmoji?
+                </p>
             </div>
 
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="card card-custom h-100 p-3 shadow-sm hover-shadow">
-                        <div class="icon-wrapper bg-orange-light">
-                            <i data-lucide="zap" class="text-primary w-6 h-6"></i>
-                        </div>
-                        <h3 class="fs-4 fw-bold mb-2">Yüksek Hız</h3>
-                        <p class="text-muted">Optimize edilmiş altyapı ile ışık hızında işlem yapın.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="p-6 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 hover:shadow-xl transition duration-300 group">
+                    <div class="w-12 h-12 bg-orange-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                        <i data-lucide="zap" class="text-primary w-6 h-6"></i>
                     </div>
+                    <h3 class="text-xl font-bold mb-2">Yüksek Hız</h3>
+                    <p class="text-gray-500 dark:text-gray-400">Optimize edilmiş altyapı ile ışık hızında işlem yapın.</p>
                 </div>
 
-                <div class="col-md-4">
-                    <div class="card card-custom h-100 p-3 shadow-sm hover-shadow">
-                        <div class="icon-wrapper bg-green-light">
-                            <i data-lucide="smartphone" class="text-secondary w-6 h-6"></i>
-                        </div>
-                        <h3 class="fs-4 fw-bold mb-2">Mobil Uyumlu</h3>
-                        <p class="text-muted">Telefon, tablet veya masaüstü; her yerde yanınızda.</p>
+                <div class="p-6 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 hover:shadow-xl transition duration-300 group">
+                    <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                        <i data-lucide="smartphone" class="text-green-600 w-6 h-6"></i>
                     </div>
+                    <h3 class="text-xl font-bold mb-2">Mobil Uyumlu</h3>
+                    <p class="text-gray-500 dark:text-gray-400">Telefon, tablet veya masaüstü; her yerde yanınızda.</p>
                 </div>
 
-                <div class="col-md-4">
-                    <div class="card card-custom h-100 p-3 shadow-sm hover-shadow">
-                        <div class="icon-wrapper bg-pink-light">
-                            <i data-lucide="shield" class="text-pink w-6 h-6"></i>
-                        </div>
-                        <h3 class="fs-4 fw-bold mb-2">Güvenli Yapı</h3>
-                        <p class="text-muted">Verileriniz modern güvenlik standartları ile korunur.</p>
+                <div class="p-6 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 hover:shadow-xl transition duration-300 group">
+                    <div class="w-12 h-12 bg-pink-100 dark:bg-pink-900 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                        <i data-lucide="shield" class="text-pink-600 w-6 h-6"></i>
                     </div>
+                    <h3 class="text-xl font-bold mb-2">Güvenli Yapı</h3>
+                    <p class="text-gray-500 dark:text-gray-400">Verileriniz modern güvenlik standartları ile korunur.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="stats" class="py-5 stats-section">
-        <div class="container text-white">
-            <div class="row text-center g-4">
-                <div class="col-6 col-md-3">
-                    <div class="fs-1 fw-bold mb-1">100+</div>
-                    <div class="text-orange-light-muted text-uppercase fs-7">Alışkanlık</div>
+
+    <section id="stats" class="py-16 bg-primary">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center text-white">
+                <div>
+                    <div class="text-4xl font-bold mb-1">100+</div>
+                    <div class="text-orange-100 text-sm uppercase">Alışkanlık</div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="fs-1 fw-bold mb-1">50+</div>
-                    <div class="text-orange-light-muted text-uppercase fs-7">Kullanıcı</div>
+                <div>
+                    <div class="text-4xl font-bold mb-1">50+</div>
+                    <div class="text-orange-100 text-sm uppercase">Kullanıcı</div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="fs-1 fw-bold mb-1">%99</div>
-                    <div class="text-orange-light-muted text-uppercase fs-7">Motivasyon</div>
+                <div>
+                    <div class="text-4xl font-bold mb-1">%99</div>
+                    <div class="text-orange-100 text-sm uppercase">Motivasyon</div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="fs-1 fw-bold mb-1">24/7</div>
-                    <div class="text-orange-light-muted text-uppercase fs-7">Erişim</div>
+                <div>
+                    <div class="text-4xl font-bold mb-1">24/7</div>
+                    <div class="text-orange-100 text-sm uppercase">Erişim</div>
                 </div>
             </div>
         </div>
     </section>
 
-    <footer class="footer-custom py-4 border-top border-dark-subtle">
-        <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center">
-            <div class="mb-2 mb-md-0 text-center text-md-start">
-                <span class="fs-4 fw-bold text-white">Charmoji</span>
-                <p class="fs-7 text-muted mt-1">&copy; 2025 Tüm hakları saklıdır.</p>
+
+    <footer class="bg-gray-900 text-gray-300 py-12 border-t border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
+            
+            <div class="mb-4 md:mb-0 text-center md:text-left">
+                <span class="text-2xl font-bold text-white">Charmoji</span>
+                <p class="text-sm mt-1 text-gray-500">&copy; 2025 Tüm hakları saklıdır.</p>
             </div>
-            <div class="d-flex gap-3">
-                <a href="https://www.instagram.com/Charmojiapp" target="_blank" rel="noopener noreferrer" class="text-muted social-icon-custom">
-                    <i data-lucide="instagram" class="w-5 h-5"></i>
+
+            <div class="flex space-x-6">
+                <a href="https://www.instagram.com/Charmojiapp" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 hover:text-primary transition">
+                    <i data-lucide="instagram" class="w-10 h-10"></i>
+                    <h3 class="text-2xl font-bold">@charmojiapp</h3>
                 </a>
             </div>
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    
+
     <script>
+        // İkonları çalıştırır
         lucide.createIcons();
-        
-        // Mobile menü butonu Bootstrap'in data-bs-toggle'ı ile çalışır, bu yüzden sadece Dark Mode mantığı kaldı.
+
+        // Elementleri seçme
+        const btn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
         const themeToggle = document.getElementById('theme-toggle');
         const html = document.documentElement;
 
-        // Dark Mode Kontrolü
+        // Mobil menü aç/kapa işlemi
+        btn.addEventListener('click', () => {
+            menu.classList.toggle('hidden');
+        });
+
+        // Sayfa yüklendiğinde tema kontrolü (Karanlık mod kayıtlı mı?)
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             html.classList.add('dark');
         } else {
             html.classList.remove('dark');
         }
 
-        // Tema değiştir
+        // Tema değiştirme butonuna tıklanınca
         themeToggle.addEventListener('click', () => {
             html.classList.toggle('dark');
+            // Tercihi tarayıcı hafızasına kaydet
             if (html.classList.contains('dark')) {
                 localStorage.theme = 'dark';
             } else {
