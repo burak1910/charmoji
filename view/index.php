@@ -63,7 +63,7 @@
                 
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-center space-x-4">
-                        <a href="giris.html" class="px-5 py-2 text-sm font-medium rounded-lg text-white bg-primary hover:bg-primaryHover transition shadow-md hover:shadow-orange-500/30">
+                        <a href="../service/login.php" class="px-5 py-2 text-sm font-medium rounded-lg text-white bg-primary hover:bg-primaryHover transition shadow-md hover:shadow-orange-500/30">
                             Giriş Yap
                         </a>
                         
@@ -102,7 +102,7 @@
                 Charmoji ile alışkanlıklarınızı yönetin. Modern, hızlı ve tamamen size özel çözümler.
             </p>
             <div class="mt-8 flex justify-center gap-4">
-                <a href="kaydol.html" class="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-primary hover:bg-primaryHover md:text-lg md:px-10 shadow-xl shadow-orange-500/40 transition hover:-translate-y-1">
+                <a href="../service/register.php" class="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-primary hover:bg-primaryHover md:text-lg md:px-10 shadow-xl shadow-orange-500/40 transition hover:-translate-y-1">
                     Başlayalım
                 </a>
             </div>
