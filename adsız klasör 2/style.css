@@ -1,0 +1,103 @@
+/* CHARMOJI — Full screen game layout (N1 dark lacivert) */
+:root{
+  --bg-dark:#0A0F24;    /* chosen N1 */
+  --navy:#071226;
+  --soft-orange:#ffb35a;
+  --accent:#ff8a00;
+  --muted:#B8C0D6;
+  --card-bg: rgba(255,255,255,0.03);
+  --glass: rgba(255,255,255,0.04);
+  --radius:14px;
+  --shadow: 0 10px 30px rgba(2,6,23,0.6);
+  --glass-2: rgba(255,255,255,0.02);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background: linear-gradient(180deg, var(--bg-dark) 0%, #03040a 100%);
+  color: #ffffff;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+
+/* TOPBAR */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.03);
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+  backdrop-filter: blur(6px);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(180deg,var(--soft-orange),var(--accent));display:flex;align-items:center;justify-content:center;color:#071226;font-weight:800}
+.title{font-weight:800;font-size:18px}
+.topmenu{display:flex;gap:10px;align-items:center}
+.menu-btn{background:transparent;border:0;color:var(--muted);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+.menu-btn.primary{background:linear-gradient(90deg,var(--accent),var(--soft-orange));color:#071226;box-shadow:0 6px 0 rgba(0,0,0,0.25)}
+
+/* profile mini */
+.profile-mini{display:flex;align-items:center;gap:10px}
+.mini-av{width:40px;height:40px;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,0.06),transparent);overflow:hidden}
+.mini-name{color:var(--muted)}
+
+/* GRID LAYOUT */
+.game-grid{display:grid;grid-template-columns:300px 1fr 360px;gap:18px;padding:20px;align-items:start;height:calc(100vh - 74px);}
+
+/* PANEL BASE */
+.panel{border-radius:12px;padding:14px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:var(--shadow);border:1px solid rgba(255,255,255,0.03);overflow:auto}
+.left{min-height:100%}
+.center{min-height:100%}
+.right{min-height:100%}
+
+/* PROFILE CARD */
+.card.profile .profile-top{display:flex;gap:12px;align-items:center}
+.circle-avatar{width:78px;height:78px;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,0.03),transparent);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.uname{font-weight:800;font-size:18px;color:#fff}
+.lvl{color:var(--muted);margin-top:4px}
+.xp-bar{background:rgba(255,255,255,0.03);height:10px;border-radius:8px;overflow:hidden;margin-top:10px}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--soft-orange),var(--accent))}
+
+/* HERO / CENTER */
+.hero{padding:18px;border-radius:12px}
+.muted{color:var(--muted)}
+.avatar-stage{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:18px}
+.main-avatar{width:210px;height:210px;border-radius:50%;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));display:flex;align-items:center;justify-content:center;border:4px solid rgba(255,255,255,0.03);box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+.avatar-actions{display:flex;gap:10px}
+
+/* CARDS ROW */
+.cards{display:grid;grid-template-columns:1fr 320px;gap:14px;margin-top:18px}
+.card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:12px}
+.quick{display:flex;gap:8px;flex-wrap:wrap}
+.q{background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;min-width:110px;text-align:center}
+
+/* FRIENDS */
+.friends-head{display:flex;gap:8px;align-items:center}
+.friends-head input{flex:1;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--muted)}
+.friends-list{list-style:none;padding:0;margin-top:12px;display:flex;flex-direction:column;gap:10px}
+.friend-item{display:flex;align-items:center;gap:12px;padding:8px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border:1px solid rgba(255,255,255,0.02)}
+.friend-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;flex:0 0 52px;display:flex;align-items:center;justify-content:center;background:#111}
+.friend-meta{flex:1}
+.friend-name{font-weight:700}
+.friend-status{font-size:12px;color:var(--muted)}
+.friend-actions button{background:transparent;border:0;color:var(--muted);cursor:pointer}
+
+/* AVATAR PREVIEW CARD */
+.avatar-preview{width:140px;height:140px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));display:flex;align-items:center;justify-content:center;margin:8px auto}
+
+/* BUTTONS */
+.btn{padding:8px 12px;border-radius:10px;border:0;cursor:pointer;background:transparent;color:#fff}
+.btn.ghost{border:1px solid rgba(255,255,255,0.04)}
+.btn.primary{background:linear-gradient(90deg,var(--accent),var(--soft-orange));color:#071226;font-weight:700;box-shadow:0 6px 0 rgba(0,0,0,0.25)}
+
+/* MOBILE */
+.mobile-bottom{display:none}
+@media (max-width:980px){
+  .game-grid{grid-template-columns:1fr;padding:12px;height:auto}
+  .left,.right{display:none}
+  .mobile-bottom{display:flex;position:fixed;left:12px;right:12px;bottom:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:8px;border-radius:12px;gap:8px;justify-content:space-around}
+}
+
+/* tiny helpers */
+.small{padding:6px 8px;border-radius:8px}

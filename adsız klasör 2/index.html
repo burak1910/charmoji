@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Charmoji — Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">C</div>
+      <div class="title">Charmoji</div>
+    </div>
+
+    <nav class="topmenu">
+      <button class="menu-btn">Market</button>
+      <button class="menu-btn">Görevler</button>
+      <button class="menu-btn">Etkinlikler</button>
+      <button class="menu-btn primary" onclick="location.href='avatar.html'">Avatarı Düzenle</button>
+    </nav>
+
+    <div class="profile-mini" id="profileMini">
+      <div id="miniAvatar" class="mini-av"></div>
+      <div id="miniName" class="mini-name">Misafir</div>
+    </div>
+  </header>
+
+  <main class="game-grid">
+    <!-- LEFT -->
+    <aside class="panel left">
+      <div class="card profile">
+        <div class="profile-top">
+          <div id="sideAvatar" class="circle-avatar"></div>
+          <div class="meta">
+            <div id="userName" class="uname">Bora</div>
+            <div class="lvl">Lv. <span id="userLevel">3</span></div>
+          </div>
+        </div>
+
+        <div class="xp">
+          <div class="xp-label">XP</div>
+          <div class="xp-bar"><div id="xpFill" class="xp-fill" style="width:46%"></div></div>
+          <div class="xp-num">120 / 260</div>
+        </div>
+
+        <div class="status">
+          <label>Durum</label>
+          <div id="statusText" class="status-text">Online 😎</div>
+        </div>
+      </div>
+
+      <div class="card news">
+        <h4>Duyurular</h4>
+        <p>Yaz koleksiyonu geldi — marketi kontrol et!</p>
+      </div>
+    </aside>
+
+    <!-- CENTER -->
+    <section class="panel center">
+      <div class="hero card">
+        <h2>Hoş geldin, <span id="greetName">Bora</span>!</h2>
+        <p class="muted">Charmoji dünyasına giriş yaptın — avatarını düzenle veya arkadaşlarınla takıl.</p>
+
+        <div class="avatar-stage">
+          <!-- R1: Yuvarlak avatar -->
+          <div id="mainAvatar" class="main-avatar">
+            <!-- SVG preview inserted by JS -->
+          </div>
+          <div class="avatar-actions">
+            <button class="btn primary" onclick="location.href='avatar.html'">Düzenle</button>
+            <button id="randomize" class="btn ghost">Rastgele</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h4>Etkinlikler</h4>
+          <ul class="muted">
+            <li>Haftalık Turnuva — Katıl, ödül kazan</li>
+            <li>Arkadaşını davet et — Bonus coin</li>
+          </ul>
+        </div>
+
+        <div class="card quick">
+          <div class="q">Level <strong id="qLevel">3</strong></div>
+          <div class="q">Arkadaş <strong id="qFriends">0</strong></div>
+          <div class="q">Coins <strong id="qCoins">250</strong></div>
+          <div class="q">Görev <strong id="qTasks">0</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT -->
+    <aside class="panel right">
+      <div class="card friends">
+        <div class="friends-head">
+          <input id="friendInput" placeholder="Kullanıcı adı ara / ekle" />
+          <button id="addFriendBtn" class="btn small">Ekle</button>
+        </div>
+        <ul id="friendsList" class="friends-list">
+          <!-- JS doldurur -->
+        </ul>
+      </div>
+
+      <div class="card avatar-card">
+        <h4>Senin Avatarın</h4>
+        <div id="avatarPreview" class="avatar-preview"></div>
+        <div class="avatar-actions">
+          <button id="editBtn" class="btn small" onclick="location.href='avatar.html'">Düzenle</button>
+          <button id="clearAvatar" class="btn small ghost">Sıfırla</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <nav class="mobile-bottom">
+    <button data-open="left">Profil</button>
+    <button data-open="center">Anasayfa</button>
+    <button data-open="right">Arkadaşlar</button>
+  </nav>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
