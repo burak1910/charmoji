@@ -1,70 +1,56 @@
 <?php
 // service/friend_action.php
-
-// Session başlatma ve path ayarları
-ob_start();
-session_set_cookie_params(0, '/');
 session_start();
-
-// Hata Raporlama
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
-// FriendManager'ı dahil et
 require_once __DIR__ . '/FriendManager.php';
 
+// Güvenlik: Giriş yapmamışsa at
 if (!isset($_SESSION['user_id'])) {
-    die("Giriş yapmalısınız.");
+    header("Location: ../view/login.php");
+    exit();
 }
 
 $myID = $_SESSION['user_id'];
-// İşlem bitince dönülecek yer
-$redirectPath = "../view/userpage.php";
 
-// 1. Arkadaş Ekleme
-if (isset($_POST['add_friend_id'])) {
-    $targetID = intval($_POST['add_friend_id']);
-    $result = FriendManager::sendRequest($myID, $targetID);
+// POST isteği gelmiş mi?
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
-    if ($result === true) {
-        $_SESSION['success'] = "Arkadaşlık isteği gönderildi.";
-    } else {
-        $_SESSION['error'] = "Hata: " . $result;
+    // 1. İSTEK GÖNDERME (Topluluk sekmesinden)
+    if (isset($_POST['action']) && $_POST['action'] === 'send_request') {
+        $targetID = intval($_POST['target_id']);
+        
+        $sonuc = FriendManager::sendRequest($myID, $targetID);
+        
+        if ($sonuc === true) {
+            $_SESSION['success'] = "Arkadaşlık isteği gönderildi!";
+        } else {
+            $_SESSION['error'] = "Hata: " . $sonuc;
+        }
+    }
+
+    // 2. İSTEK KABUL ETME (İstekler sekmesinden)
+    elseif (isset($_POST['accept_request_id'])) {
+        $istekID = intval($_POST['accept_request_id']);
+        
+        if (FriendManager::acceptRequest($istekID, $myID)) {
+            $_SESSION['success'] = "Arkadaşlık isteği kabul edildi!";
+        } else {
+            $_SESSION['error'] = "İstek kabul edilemedi.";
+        }
+    }
+
+    // 3. İSTEK REDDETME (İstekler sekmesinden)
+    elseif (isset($_POST['reject_request_id'])) {
+        $istekID = intval($_POST['reject_request_id']);
+        
+        if (FriendManager::removeFriend($istekID)) {
+            $_SESSION['success'] = "İstek reddedildi/silindi.";
+        } else {
+            $_SESSION['error'] = "İşlem başarısız.";
+        }
     }
 }
 
-// 2. Kabul Etme
-elseif (isset($_POST['accept_request_id'])) {
-    $reqID = intval($_POST['accept_request_id']);
-    if (FriendManager::acceptRequest($reqID, $myID)) {
-        $_SESSION['success'] = "Arkadaşlık isteği kabul edildi!";
-    } else {
-        $_SESSION['error'] = "İşlem başarısız.";
-    }
-}
-
-// 3. İsteği Reddetme (YENİ EKLENEN KISIM) ❌
-elseif (isset($_POST['reject_request_id'])) {
-    $reqID = intval($_POST['reject_request_id']);
-    // Reddetmek aslında o isteği veritabanından silmektir
-    if (FriendManager::removeFriend($reqID)) {
-        $_SESSION['success'] = "Arkadaşlık isteği reddedildi.";
-    } else {
-        $_SESSION['error'] = "İşlem başarısız.";
-    }
-}
-
-// 4. Arkadaş Silme
-elseif (isset($_POST['remove_id'])) {
-    $reqID = intval($_POST['remove_id']);
-    if (FriendManager::removeFriend($reqID)) {
-        $_SESSION['success'] = "Kişi listenizden çıkarıldı.";
-    } else {
-        $_SESSION['error'] = "Silme işlemi başarısız.";
-    }
-}
-
-// İşlem bitince userpage'e geri dön
-header("Location: " . $redirectPath);
+// İşlem bitince kullanıcıyı sayfasına geri yolla
+header("Location: ../view/userpage.php");
 exit();
 ?>

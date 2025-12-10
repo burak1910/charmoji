@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 
 // Zaten giriş yapılmışsa yönlendir
 if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
-    header("Location: userpage.php");
+    header("Location: ../view/userpage.php");
     exit();
 }
 ?>

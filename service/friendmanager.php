@@ -1,7 +1,6 @@
 <?php
 // service/FriendManager.php
 
-// Veritabanı bağlantısını çekiyoruz
 require_once __DIR__ . '/auth.php'; 
 
 class FriendManager {
@@ -14,7 +13,7 @@ class FriendManager {
             return "Kendini ekleyemezsin.";
         }
 
-        $check = $conn->prepare("SELECT ID FROM Arkadaslar WHERE (GonderenID = ? AND AliciID = ?) OR (GonderenID = ? AND AliciID = ?)");
+        $check = $conn->prepare("SELECT ArkadaslikID FROM Arkadasliklar WHERE (IstekGonderenID = ? AND IstekAlanID = ?) OR (IstekGonderenID = ? AND IstekAlanID = ?)");
         $check->bind_param("iiii", $myID, $targetID, $targetID, $myID);
         $check->execute();
         
@@ -22,7 +21,8 @@ class FriendManager {
             return "Zaten arkadaşsınız veya istek gönderilmiş.";
         }
 
-        $stmt = $conn->prepare("INSERT INTO Arkadaslar (GonderenID, AliciID, Durum) VALUES (?, ?, 'Beklemede')");
+        // DÜZELTME: 'Beklemede' yerine 0 gönderiyoruz.
+        $stmt = $conn->prepare("INSERT INTO Arkadasliklar (IstekGonderenID, IstekAlanID, Durum) VALUES (?, ?, 0)");
         $stmt->bind_param("ii", $myID, $targetID);
         
         if ($stmt->execute()) {
@@ -32,10 +32,36 @@ class FriendManager {
         }
     }
 
+    // 7. Topluluk Listesi (Arkadaş olmadığım herkesi getir)
+    public static function getCommunitySuggestions($myID) {
+        $conn = get_db_connection();
+        
+        // Mantık: Ben değilsem VE Arkadaş tablosunda (kabul veya beklemede) kaydımız yoksa getir.
+        $sql = "
+            SELECT k.KullaniciID, k.Ad, k.Eposta, 
+                   (SELECT COALESCE(SUM(ToplamPuan),0) FROM KullaniciStatlari WHERE KullaniciID = k.KullaniciID) as ToplamXP
+            FROM Kullanicilar k
+            WHERE k.KullaniciID != ?
+            AND NOT EXISTS (
+                SELECT 1 FROM Arkadasliklar a 
+                WHERE (a.IstekGonderenID = k.KullaniciID AND a.IstekAlanID = ?) 
+                   OR (a.IstekGonderenID = ? AND a.IstekAlanID = k.KullaniciID)
+            )
+            ORDER BY ToplamXP DESC -- En yüksek puanlıları üstte göster (Prestij)
+            LIMIT 50
+        ";
+
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("iii", $myID, $myID, $myID);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
     // 2. İsteği Kabul Et
     public static function acceptRequest($istekID, $myID) {
         $conn = get_db_connection();
-        $stmt = $conn->prepare("UPDATE Arkadaslar SET Durum = 'Kabul' WHERE ID = ? AND AliciID = ?");
+        // DÜZELTME: 'Kabul' yerine 1 yapıyoruz.
+        $stmt = $conn->prepare("UPDATE Arkadasliklar SET Durum = 1 WHERE ArkadaslikID = ? AND IstekAlanID = ?");
         $stmt->bind_param("ii", $istekID, $myID);
         return $stmt->execute();
     }
@@ -43,7 +69,7 @@ class FriendManager {
     // 3. İsteği Reddet veya Arkadaşı Sil
     public static function removeFriend($istekID) {
         $conn = get_db_connection();
-        $stmt = $conn->prepare("DELETE FROM Arkadaslar WHERE ID = ?");
+        $stmt = $conn->prepare("DELETE FROM Arkadasliklar WHERE ArkadaslikID = ?");
         $stmt->bind_param("i", $istekID);
         return $stmt->execute();
     }
@@ -51,10 +77,11 @@ class FriendManager {
     // 4. Bana Gelen Bekleyen İstekler
     public static function getPendingRequests($myID) {
         $conn = get_db_connection();
-        $sql = "SELECT A.ID as IstekID, K.Ad, K.Eposta 
-                FROM Arkadaslar A 
-                JOIN Kullanicilar K ON A.GonderenID = K.KullaniciID 
-                WHERE A.AliciID = ? AND A.Durum = 'Beklemede'";
+        // DÜZELTME: Durum = 0 (Bekleyenler)
+        $sql = "SELECT ArkadaslikID as IstekID, K.Ad, K.Eposta 
+                FROM Arkadasliklar A 
+                JOIN Kullanicilar K ON A.IstekGonderenID = K.KullaniciID 
+                WHERE A.IstekAlanID = ? AND A.Durum = 0";
         
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("i", $myID);
@@ -65,15 +92,16 @@ class FriendManager {
     // 5. Mevcut Arkadaşlarım
     public static function getFriends($myID) {
         $conn = get_db_connection();
-        $sql = "SELECT K.Ad, K.Eposta, A.ID as ArkadaslikID
-                FROM Arkadaslar A
+        // DÜZELTME: Durum = 1 (Kabul Edilenler)
+        $sql = "SELECT K.Ad, K.Eposta, ArkadaslikID as ArkadaslikID
+                FROM Arkadasliklar A
                 JOIN Kullanicilar K ON 
                     (CASE 
-                        WHEN A.GonderenID = ? THEN A.AliciID = K.KullaniciID
-                        WHEN A.AliciID = ? THEN A.GonderenID = K.KullaniciID
+                        WHEN A.IstekGonderenID = ? THEN A.IstekAlanID = K.KullaniciID
+                        WHEN A.IstekAlanID = ? THEN A.IstekGonderenID = K.KullaniciID
                      END)
-                WHERE (A.GonderenID = ? OR A.AliciID = ?) 
-                  AND A.Durum = 'Kabul'";
+                WHERE (A.IstekGonderenID = ? OR A.IstekAlanID = ?) 
+                  AND A.Durum = 1";
 
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("iiii", $myID, $myID, $myID, $myID);
@@ -81,23 +109,19 @@ class FriendManager {
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
     
-    // 6. Kullanıcı Ara (GELİŞMİŞ FİLTRELEME İLE)
-    // Artık mevcut arkadaşları veya istek atılmış kişileri listelemez.
+    // 6. Kullanıcı Ara
     public static function searchUsers($keyword, $myID) {
         $conn = get_db_connection();
         
-        // Bu SQL parçası, "Eğer bu kişiyle aramda bir kayıt varsa onu getirme" der.
-        // NOT EXISTS yapısı performans açısından en hızlısıdır.
         $excludeCondition = "
             AND NOT EXISTS (
-                SELECT 1 FROM Arkadaslar a 
-                WHERE (a.GonderenID = k.KullaniciID AND a.AliciID = ?) 
-                   OR (a.GonderenID = ? AND a.AliciID = k.KullaniciID)
+                SELECT 1 FROM Arkadasliklar a 
+                WHERE (a.IstekGonderenID = k.KullaniciID AND a.IstekAlanID = ?) 
+                   OR (a.IstekGonderenID = ? AND a.IstekAlanID = k.KullaniciID)
             )
         ";
 
         if (empty($keyword)) {
-            // Arama yoksa RASTGELE öner (Ama ekli olanlar hariç)
             $sql = "SELECT k.KullaniciID, k.Ad, k.Eposta 
                     FROM Kullanicilar k 
                     WHERE k.KullaniciID != ? 
@@ -105,11 +129,9 @@ class FriendManager {
                     ORDER BY RAND() LIMIT 5";
             
             $stmt = $conn->prepare($sql);
-            // Parametreler: (BenimID, BenimID[filtre1], BenimID[filtre2])
             $stmt->bind_param("iii", $myID, $myID, $myID);
 
         } else {
-            // Arama varsa İSİM/E-POSTA ara (Ama ekli olanlar hariç)
             $term = "%" . $keyword . "%";
             $sql = "SELECT k.KullaniciID, k.Ad, k.Eposta 
                     FROM Kullanicilar k 
@@ -119,7 +141,6 @@ class FriendManager {
                     LIMIT 20";
             
             $stmt = $conn->prepare($sql);
-            // Parametreler: (Kelime, Kelime, BenimID, BenimID[filtre1], BenimID[filtre2])
             $stmt->bind_param("ssiii", $term, $term, $myID, $myID, $myID);
         }
         
