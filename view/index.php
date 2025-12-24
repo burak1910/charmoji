@@ -88,7 +88,7 @@
 
         <div id="mobile-menu" class="hidden md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
             <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                <a href="giris.php" class="block text-center w-full px-5 py-3 rounded-md text-base font-medium text-white bg-primary hover:bg-primaryHover">
+                <a href="../service/login.php" class="block text-center w-full px-5 py-3 rounded-md text-base font-medium text-white bg-primary hover:bg-primaryHover">
                     Giriş Yap
                 </a>
             </div>
@@ -109,7 +109,7 @@
                 Charmoji ile alışkanlıklarınızı yönetin. Modern, hızlı ve tamamen size özel çözümler.
             </p>
             <div class="mt-8 flex justify-center gap-4">
-                <a href="kaydol.html" class="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-primary hover:bg-primaryHover md:text-lg md:px-10 shadow-xl shadow-orange-500/40 transition hover:-translate-y-1">
+                <a href="../service/register.php" class="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-primary hover:bg-primaryHover md:text-lg md:px-10 shadow-xl shadow-orange-500/40 transition hover:-translate-y-1">
                     Başlayalım
                 </a>
             </div>
@@ -284,7 +284,7 @@
         } else {
             html.classList.remove('dark');
         }
-            /*Arka Planın Modunu Kontrol ederiz*/
+            /*Arka Planın Modunu Kontrol ederiz*/g
         themeToggle.addEventListener('click', () => {
             html.classList.toggle('dark');
             if (html.classList.contains('dark')) {
