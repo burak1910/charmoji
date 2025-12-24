@@ -284,7 +284,7 @@
         } else {
             html.classList.remove('dark');
         }
-            /*Arka Planın Modunu Kontrol ederiz*/g
+            /*Arka Planın Modunu Kontrol ederiz*/
         themeToggle.addEventListener('click', () => {
             html.classList.toggle('dark');
             if (html.classList.contains('dark')) {
