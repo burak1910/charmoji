@@ -130,7 +130,7 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
     </style>
 </head>
 <body class="antialiased min-h-screen">
-
+<!--Navbar-->
     <nav class="fixed w-full z-50 bg-gray-900/90 backdrop-blur-md border-b border-gray-700 shadow-lg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16 relative">
@@ -170,6 +170,7 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
         </div>
     </nav>
 
+    <!-- avatar kısmı -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 grid grid-cols-1 lg:grid-cols-4 gap-8">
         
         <aside class="lg:col-span-1 space-y-6">
@@ -206,7 +207,8 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
                 </div>
             </div>
         </aside>
-
+        
+        <!-- Görev ekle görev panosu -->
         <main class="lg:col-span-2">
             <div class="flex justify-between items-center mb-6">
                 <div>
@@ -215,7 +217,7 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
                 </div>
                 <button onclick="document.getElementById('habitModal').showModal()" class="bg-primary hover:bg-primaryHover text-white px-5 py-2.5 rounded-lg text-sm font-bold transition shadow-lg shadow-orange-900/20 flex items-center gap-2 transform hover:-translate-y-0.5"><i class="fa-solid fa-plus"></i> Görev Ekle</button>
             </div>
-            <div class="space-y-4">
+            <div class="space-y-4"> 
                 <?php if(empty($aliskanliklar)): ?>
                     <div class="text-center py-16 bg-gray-800 rounded-xl border border-gray-700 border-dashed"><i class="fa-solid fa-ghost text-gray-600 text-5xl mb-4"></i><p class="text-gray-500 text-sm">Henüz bir görevin yok.</p></div>
                 <?php endif; ?>
@@ -251,7 +253,8 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
 
         <aside class="lg:col-span-1 space-y-6">
             
-            <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-xl">
+        <!-- Arkadaş Yönetim Bölümü -->    
+        <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-xl">
                 <div class="flex border-b border-gray-700 mb-4 pb-0">
                     <button onclick="openTab('topluluk')" class="tab-btn active flex-1 text-center pb-3 text-xs font-bold transition uppercase tracking-wide">Topluluk</button>
                     <button onclick="openTab('arkadaslar')" class="tab-btn flex-1 text-center pb-3 text-xs font-bold transition uppercase tracking-wide">Arkadaşlar</button>
@@ -301,6 +304,7 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
                 </div>
             </div>
 
+            <!-- Günlük Görevler Bölümü -->
             <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-xl">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-sm font-bold text-white uppercase tracking-wider">Günlük Görevler</h3>
@@ -319,6 +323,7 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
                                 </div>
                             </div>
                             <?php if($quest['TamamlandiMi'] && !$quest['OdulAlindiMi']): ?>
+                               <!-- ödülü alma kodu -->
                                 <button onclick="claimReward(<?php echo $quest['KullaniciGorevID']; ?>, this)" class="bg-yellow-500 hover:bg-yellow-600 text-black text-[10px] font-bold px-3 py-1.5 rounded-md shadow-lg shadow-yellow-500/20 transition animate-pulse">ÖDÜLÜ AL</button>
                             <?php elseif($quest['OdulAlindiMi']): ?>
                                 <span class="text-gray-500 text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-check"></i> Alındı</span>
@@ -332,7 +337,7 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
 
         </aside>
     </div>
-
+    <!-- Görev Ekle Modeli -->
     <dialog id="habitModal" class="p-0 rounded-2xl shadow-2xl w-full max-w-md bg-gray-900 border border-gray-700 text-white backdrop:bg-black/80">
         <div class="p-6">
             <div class="flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
@@ -362,7 +367,11 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
         function toggleStatsPanel() { document.getElementById('statsPanel').classList.toggle('hidden'); }
         Chart.defaults.color = '#9CA3AF'; Chart.defaults.borderColor = '#374151';
         const ctx = document.getElementById('statRadar').getContext('2d');
-        new Chart(ctx, { type: 'radar', data: { labels: <?php echo $jsonLabels; ?>, datasets: [{ label: 'Seviye', data: <?php echo $jsonLevels; ?>, fill: true, backgroundColor: 'rgba(249, 115, 22, 0.2)', borderColor: '#F97316', pointBackgroundColor: '#F97316', pointBorderColor: '#fff' }] }, options: { scales: { r: { angleLines: {display: true, color: '#374151'}, grid: { color: '#374151' }, suggestedMin: 0, suggestedMax: 10, ticks: {display: false, backdropColor: 'transparent'} } }, plugins: { legend: {display: false} } } });
+        new Chart(ctx, { type: 'radar', data: { labels: <?php echo $jsonLabels; ?>, 
+            datasets: [{ label: 'Seviye', data: <?php echo $jsonLevels; ?>, fill: true, 
+            backgroundColor: 'rgba(249, 115, 22, 0.2)', borderColor: '#F97316', 
+            pointBackgroundColor: '#F97316', pointBorderColor: '#fff' }] }, options: { scales: { r: { angleLines: {display: true, color: '#374151'}, 
+            grid: { color: '#374151' }, suggestedMin: 0, suggestedMax: 10, ticks: {display: false, backdropColor: 'transparent'} } }, plugins: { legend: {display: false} } } });
 
         function toggleHabit(ka_id, checkbox) {
             const isChecked = checkbox.checked;

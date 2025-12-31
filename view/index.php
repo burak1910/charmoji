@@ -67,7 +67,7 @@
                 
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-center space-x-4">
-                        <a href="giris.html" class="px-5 py-2 text-sm font-medium rounded-lg text-white bg-primary hover:bg-primaryHover transition shadow-md hover:shadow-orange-500/30">
+                        <a href="../service/login.php" class="px-5 py-2 text-sm font-medium rounded-lg text-white bg-primary hover:bg-primaryHover transition shadow-md hover:shadow-orange-500/30">
                             Giriş Yap
                         </a>
                         
@@ -267,9 +267,9 @@
     </footer>
 
     <script>
-        /* JAVASCRİPT Kodları */
+       
         lucide.createIcons();
-            /*Mobil Menü Kısmı*/
+           
         const btn = document.getElementById('mobile-menu-btn');
         const menu = document.getElementById('mobile-menu');
         const themeToggle = document.getElementById('theme-toggle');
