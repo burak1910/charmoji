@@ -1,175 +1,117 @@
-/*1. KULLANICILAR TABLOSU*/
+/* 1. KULLANICILAR TABLOSU */
 CREATE TABLE Kullanicilar (
-    KullaniciID INT IDENTITY(1,1) PRIMARY KEY,
-    Ad NVARCHAR(100) NOT NULL,
-    Eposta NVARCHAR(100) NOT NULL UNIQUE,
+    KullaniciID INT AUTO_INCREMENT PRIMARY KEY,
+    Ad VARCHAR(100) NOT NULL,
+    Eposta VARCHAR(100) NOT NULL UNIQUE,
     SifreHash VARCHAR(255) NOT NULL,
-    KayitTarihi DATETIME DEFAULT GETDATE(),
-
-    -- LEVEL SİSTEMİ
-    Seviye INT NOT NULL DEFAULT 1,
-    XP INT NOT NULL DEFAULT 0,
-
-    -- PARA
-    Bakiye DECIMAL(10,2) DEFAULT 0,
-
-    SonGorulme DATETIME DEFAULT GETDATE()
+    KayitTarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+    -- Eksik olan avatar verisi
+    AvatarURL VARCHAR(255) DEFAULT 'default.png',
+    -- Level ve Para Sistemi
+    Seviye INT DEFAULT 1,
+    XP INT DEFAULT 0,
+    Bakiye DECIMAL(10,2) DEFAULT 0.00
 );
 
-CREATE INDEX IX_Kullanicilar_Eposta ON Kullanicilar(Eposta);
+/* 2. KULLANICI STATLARI TABLOSU (Fotoğraftaki eksik tablo) */
+CREATE TABLE KullaniciStatlari (
+    StatID INT AUTO_INCREMENT PRIMARY KEY,
+    KullaniciID INT NOT NULL,
+    StatTuru VARCHAR(50) NOT NULL, -- Örn: 'Güç', 'Zeka'
+    ToplamPuan INT DEFAULT 0,
+    CONSTRAINT FK_Stat_Kullanici FOREIGN KEY (KullaniciID) 
+        REFERENCES Kullanicilar(KullaniciID) ON DELETE CASCADE
+);
 
-
-
-   /*2. ALIŞKANLIKLAR TABLOSU*/
-
+/* 3. ALIŞKANLIKLAR TABLOSU */
 CREATE TABLE Aliskanliklar (
-    AliskanlikID INT IDENTITY(1,1) PRIMARY KEY,
-    Ad NVARCHAR(100) UNIQUE NOT NULL,
-    Aciklama NVARCHAR(MAX),
-    VarsayilanHedef NVARCHAR(50),
-    HedefTipi NVARCHAR(20)
+    AliskanlikID INT AUTO_INCREMENT PRIMARY KEY,
+    Ad VARCHAR(100) UNIQUE NOT NULL,
+    Aciklama TEXT,
+    VarsayilanHedef VARCHAR(50),
+    HedefTipi VARCHAR(20),
+    -- Eksik olan stat türü ve puan alanları
+    StatTuru VARCHAR(50),
+    Puan INT DEFAULT 10
 );
 
-
-
-  /* 3. KULLANICI ALIŞKANLIKLARI*/
-
+/* 4. KULLANICI ALIŞKANLIKLARI */
 CREATE TABLE KullaniciAliskanliklari (
-    KullaniciAliskanlikID INT IDENTITY(1,1) PRIMARY KEY,
+    KullaniciAliskanlikID INT AUTO_INCREMENT PRIMARY KEY,
     KullaniciID INT NOT NULL,
     AliskanlikID INT NOT NULL,
-    OzelHedefDegeri NVARCHAR(50),
+    OzelHedefDegeri VARCHAR(50),
     BaslangicTarihi DATE NOT NULL,
-    AktifMi BIT DEFAULT 1,
-
-    CONSTRAINT FK_KA_Kullanici FOREIGN KEY (KullaniciID)
-        REFERENCES Kullanicilar(KullaniciID) ON DELETE CASCADE,
-
-    CONSTRAINT FK_KA_Aliskanlik FOREIGN KEY (AliskanlikID)
-        REFERENCES Aliskanliklar(AliskanlikID) ON DELETE CASCADE,
-
-    CONSTRAINT UQ_Kullanici_Aliskanlik UNIQUE (KullaniciID, AliskanlikID)
+    AktifMi TINYINT(1) DEFAULT 1,
+    -- Eksik olan seri ve son işlem alanları
+    Seri INT DEFAULT 0,
+    SonIslemTarihi DATETIME NULL,
+    CONSTRAINT FK_KA_Kullanici FOREIGN KEY (KullaniciID) REFERENCES Kullanicilar(KullaniciID),
+    CONSTRAINT FK_KA_Aliskanlik FOREIGN KEY (AliskanlikID) REFERENCES Aliskanliklar(AliskanlikID)
 );
 
-CREATE INDEX IX_KA_KullaniciID ON KullaniciAliskanliklari(KullaniciID);
-CREATE INDEX IX_KA_AliskanlikID ON KullaniciAliskanliklari(AliskanlikID);
-
-
-
-   /*4. TAKİP KAYITLARI*/
+/* 5. TAKİP KAYITLARI */
 CREATE TABLE TakipKayitlari (
-    KayitID INT IDENTITY(1,1) PRIMARY KEY,
+    KayitID INT AUTO_INCREMENT PRIMARY KEY,
     KullaniciAliskanlikID INT NOT NULL,
     Tarih DATE NOT NULL,
     GerceklesenDeger DECIMAL(10,2),
-    TamamlandiMi BIT NOT NULL,
-
-    CONSTRAINT FK_TK_KA FOREIGN KEY (KullaniciAliskanlikID)
-        REFERENCES KullaniciAliskanliklari(KullaniciAliskanlikID) ON DELETE CASCADE,
-
-    CONSTRAINT UQ_Takip UNIQUE (KullaniciAliskanlikID, Tarih)
+    TamamlandiMi TINYINT(1) NOT NULL DEFAULT 0, --
+    CONSTRAINT FK_TK_KA FOREIGN KEY (KullaniciAliskanlikID) REFERENCES KullaniciAliskanliklari(KullaniciAliskanlikID)
 );
 
-CREATE INDEX IX_TK_KAID ON TakipKayitlari(KullaniciAliskanlikID);
-
-
-
-   /*5. ARKADAŞLIK TABLOSU*/
-CREATE TABLE Arkadasliklar (
-    ArkadaslikID INT IDENTITY(1,1) PRIMARY KEY,
-    IstekGonderenID INT NOT NULL,
-    IstekAlanID INT NOT NULL,
-    Durum TINYINT DEFAULT 0,
-    OlusturmaTarihi DATETIME DEFAULT GETDATE(),
-
-    CONSTRAINT FK_Ark_Gonderen FOREIGN KEY (IstekGonderenID)
-        REFERENCES Kullanicilar(KullaniciID),
-
-    CONSTRAINT FK_Ark_Alan FOREIGN KEY (IstekAlanID)
-        REFERENCES Kullanicilar(KullaniciID),
-
-    CONSTRAINT UQ_Arkadaslik UNIQUE (IstekGonderenID, IstekAlanID),
-    CONSTRAINT CHK_Arkadaslik_Self CHECK (IstekGonderenID <> IstekAlanID)
+/* 6. ARKADAŞLAR TABLOSU */
+CREATE TABLE arkadaslar (
+    ID INT AUTO_INCREMENT PRIMARY KEY,
+    GonderenID INT NOT NULL,
+    AliciID INT NOT NULL,
+    Durum ENUM('Beklemede', 'Kabul', 'Red') DEFAULT 'Beklemede', --
+    Tarih DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT FK_Ark_Gonderen FOREIGN KEY (GonderenID) REFERENCES Kullanicilar(KullaniciID),
+    CONSTRAINT FK_Ark_Alici FOREIGN KEY (AliciID) REFERENCES Kullanicilar(KullaniciID)
 );
 
-CREATE INDEX IX_Ark_Gonderen ON Arkadasliklar(IstekGonderenID);
-CREATE INDEX IX_Ark_Alan ON Arkadasliklar(IstekAlanID);
-
-
-
-  /* 6. MARKET EŞYALARI*/
+/* 7. MARKET EŞYALARI */
 CREATE TABLE MarketEsyalari (
-    EsyaID INT IDENTITY(1,1) PRIMARY KEY,
-    Ad NVARCHAR(100) NOT NULL,
-    Aciklama NVARCHAR(255),
+    EsyaID INT AUTO_INCREMENT PRIMARY KEY,
+    Ad VARCHAR(100) NOT NULL,
+    Aciklama VARCHAR(255),
     Fiyat DECIMAL(10,2) NOT NULL,
-    GorselURL NVARCHAR(255),
-    EsyaTuru NVARCHAR(50),
-
-    -- LEVEL GEREKSİNİMİ
-    GerekenSeviye INT DEFAULT 1
+    GorselURL VARCHAR(255),
+    EsyaTuru VARCHAR(50),
+    GerekenSeviye INT DEFAULT 1 --
 );
 
-CREATE INDEX IX_Market_Level ON MarketEsyalari(GerekenSeviye);
-CREATE INDEX IX_Market_Tur ON MarketEsyalari(EsyaTuru);
-
-
-
-
-  /* 7. KULLANICI ENVANTERİ*/
+/* 8. KULLANICI ENVANTERİ */
 CREATE TABLE KullaniciEnvanteri (
-    EnvanterID INT IDENTITY(1,1) PRIMARY KEY,
+    EnvanterID INT AUTO_INCREMENT PRIMARY KEY,
     KullaniciID INT NOT NULL,
     EsyaID INT NOT NULL,
-    AlimTarihi DATETIME DEFAULT GETDATE(),
-    KusandiMi BIT DEFAULT 0,
-
-    CONSTRAINT FK_Env_Kullanici FOREIGN KEY (KullaniciID)
-        REFERENCES Kullanicilar(KullaniciID) ON DELETE CASCADE,
-
-    CONSTRAINT FK_Env_Esya FOREIGN KEY (EsyaID)
-        REFERENCES MarketEsyalari(EsyaID) ON DELETE CASCADE,
-
-    CONSTRAINT UQ_Envanter UNIQUE (KullaniciID, EsyaID)
+    AlimTarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+    KusandiMi TINYINT(1) DEFAULT 0, --
+    CONSTRAINT FK_Env_Kullanici FOREIGN KEY (KullaniciID) REFERENCES Kullanicilar(KullaniciID),
+    CONSTRAINT FK_Env_Esya FOREIGN KEY (EsyaID) REFERENCES MarketEsyalari(EsyaID)
 );
 
-CREATE INDEX IX_Env_Kullanici ON KullaniciEnvanteri(KullaniciID);
-
-
-
-
- /* 8. GÖREV TANIMLARI (Admin)*/
-
+/* 9. GÖREV TANIMLARI */
 CREATE TABLE GorevTanimlari (
-    GorevTanimID INT IDENTITY(1,1) PRIMARY KEY,
-    Aciklama NVARCHAR(255) NOT NULL,
-
-    OdulPara DECIMAL(10,2) DEFAULT 0,
-    OdulXP INT DEFAULT 0,
-
-    HedefSayi INT DEFAULT 1
+    GorevTanimID INT AUTO_INCREMENT PRIMARY KEY,
+    Baslik VARCHAR(100),
+    Aciklama TEXT NOT NULL,
+    OdulPara DECIMAL(10,2) DEFAULT 0.00,
+    HedefSayi INT DEFAULT 1,
+    Ikon VARCHAR(100) --
 );
 
-
-  /* 9. KULLANICI GÜNLÜK GÖREVLERİ*/
-
+/* 10. KULLANICI GÜNLÜK GÖREVLERİ */
 CREATE TABLE KullaniciGunlukGorevleri (
-    KullaniciGorevID INT IDENTITY(1,1) PRIMARY KEY,
+    KullaniciGorevID INT AUTO_INCREMENT PRIMARY KEY,
     KullaniciID INT NOT NULL,
     GorevTanimID INT NOT NULL,
-    Tarih DATE DEFAULT GETDATE(),
+    Tarih DATE DEFAULT (CURRENT_DATE),
     MevcutIlerleme INT DEFAULT 0,
-    TamamlandiMi BIT DEFAULT 0,
-    OdulAlindiMi BIT DEFAULT 0,
-
-    CONSTRAINT FK_KGG_Kullanici FOREIGN KEY (KullaniciID)
-        REFERENCES Kullanicilar(KullaniciID) ON DELETE CASCADE,
-
-    CONSTRAINT FK_KGG_Tanim FOREIGN KEY (GorevTanimID)
-        REFERENCES GorevTanimlari(GorevTanimID) ON DELETE CASCADE,
-
-    CONSTRAINT UQ_KGG UNIQUE (KullaniciID, GorevTanimID, Tarih)
+    TamamlandiMi TINYINT(1) DEFAULT 0,
+    OdulAlindiMi TINYINT(1) DEFAULT 0, --
+    CONSTRAINT FK_KGG_Kullanici FOREIGN KEY (KullaniciID) REFERENCES Kullanicilar(KullaniciID),
+    CONSTRAINT FK_KGG_Tanim FOREIGN KEY (GorevTanimID) REFERENCES GorevTanimlari(GorevTanimID)
 );
-
-CREATE INDEX IX_KGG_Kullanici ON KullaniciGunlukGorevleri(KullaniciID);
-CREATE INDEX IX_KGG_Gorev ON KullaniciGunlukGorevleri(GorevTanimID);
