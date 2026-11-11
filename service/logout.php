@@ -3,6 +3,11 @@
 // 1. Mevcut oturumu güvenli ayarlarla yakala (auth.php başlatır)
 require_once __DIR__ . '/auth.php';
 
+// Çıkış durum değiştiren bir işlemdir: yalnızca CSRF jetonlu POST ile yapılır
+// (GET ile, ör. bir <img src> ya da bağlantıyla tetiklenemez).
+yalnizca_post();
+csrf_dogrula();
+
 // 2. Session içindeki tüm değişkenleri (kullanıcı adı, id vs.) temizle
 $_SESSION = array();
 

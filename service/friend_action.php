@@ -13,7 +13,9 @@ $myID = (int) $_SESSION['user_id'];
 
 // POST isteği gelmiş mi?
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
+    // Jetonsuz ya da yanlış jetonlu istek 403 ile reddedilir.
+    csrf_dogrula();
+
     // 1. İSTEK GÖNDERME (Topluluk sekmesinden)
     if (isset($_POST['action']) && $_POST['action'] === 'send_request') {
         $targetID = intval($_POST['target_id']);

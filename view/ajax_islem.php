@@ -15,6 +15,11 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Bu uç noktadaki tüm işlemler durum değiştirir: yalnızca POST + CSRF jetonu
+// (X-CSRF-Token başlığı ya da csrf_token alanı).
+yalnizca_post();
+csrf_dogrula();
+
 $kullaniciID = (int) $_SESSION['user_id'];
 $conn = get_db_connection();
 $bugun = date('Y-m-d');

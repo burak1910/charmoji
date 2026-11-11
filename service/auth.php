@@ -105,9 +105,12 @@ if (basename(__FILE__) == basename($_SERVER["SCRIPT_FILENAME"])) {
 
     if ($_SERVER["REQUEST_METHOD"] !== "POST") {
         // Formdan gelmiyorsa ana sayfaya at
-        header("Location: ../view/index.php"); 
+        header("Location: ../view/index.php");
         exit();
     }
+
+    // Giriş ve kayıt formları CSRF jetonu taşımalı (login CSRF'e karşı).
+    csrf_dogrula();
 
     if (isset($_POST['username']) && isset($_POST['password']) && !isset($_POST['fullname'])) {
         handle_login(); 

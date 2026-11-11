@@ -203,6 +203,8 @@ $kusanilanlar = array_filter($envanter, function($item) { return $item['KusandiM
     </div>
 
     <script>
+        // AJAX istekleri için CSRF jetonu (X-CSRF-Token başlığında gönderilir).
+        const CSRF_JETONU = <?php echo json_encode(csrf_jetonu()); ?>;
         // --- RENK GÜNCELLEME ---
         function updateFill(ids, color) {
             if(!Array.isArray(ids)) ids = [ids];
@@ -223,7 +225,7 @@ $kusanilanlar = array_filter($envanter, function($item) { return $item['KusandiM
 
             fetch('ajax_islem.php', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': CSRF_JETONU},
                 body: `save_avatar_colors=1&colors=${encodeURIComponent(JSON.stringify(colors))}`
             })
             .then(res => res.json())
@@ -325,7 +327,7 @@ $kusanilanlar = array_filter($envanter, function($item) { return $item['KusandiM
             // 2. Veritabanına Kaydet
             fetch('ajax_islem.php', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': CSRF_JETONU},
                 body: `equip_item_id=${esyaId}`
             })
             .then(res => res.json())

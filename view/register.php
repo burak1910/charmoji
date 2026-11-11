@@ -116,6 +116,7 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
             <?php endif; ?>
 
             <form action="../service/auth.php" method="POST" class="space-y-5">
+                <?= csrf_alani() ?>
                 
                 <div>
                     <label for="fullname" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ad Soyad</label>

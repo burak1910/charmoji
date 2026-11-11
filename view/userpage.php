@@ -64,6 +64,7 @@ $jsonLevels = json_encode($siraliLevels); $jsonLabels = json_encode($varsayilanS
 $ortalamaLevel = floor(array_sum($levels) / count($levels));
 
 if (isset($_POST['add_habit_btn'])) {
+    csrf_dogrula(); // Jetonsuz/yanlış jetonlu istek 403 ile reddedilir.
     $yeniAd = trim($_POST['habit_name'] ?? ''); $secilenStat = $_POST['habit_stat'] ?? ''; $puan = 10;
     // Yalnızca beş geçerli stat kabul edilir (ikinci derece SQL enjeksiyonuna karşı).
     if (!is_string($secilenStat) || !in_array($secilenStat, $varsayilanStatlar, true)) {
@@ -163,9 +164,10 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
                         <?php echo renderAvatar($myAvatarData, '40px', $myItems); ?>
                     </a>
                     
-                    <a href="../service/logout.php" class="text-gray-500 hover:text-red-500 transition ml-1" title="Çıkış Yap">
+                    <form action="../service/logout.php" method="POST" class="flex"><?php echo csrf_alani(); ?>
+                    <button type="submit" class="text-gray-500 hover:text-red-500 transition ml-1" title="Çıkış Yap">
                         <i class="fa-solid fa-right-from-bracket text-lg"></i>
-                    </a>
+                    </button></form>
                 </div>
 
             </div>
@@ -271,7 +273,7 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
                                 <?php echo renderAvatar($kisi['AvatarVerisi'] ?? null, '36px'); ?>
                                 <div><p class="text-sm font-semibold text-gray-300"><?php echo htmlspecialchars($kisi['Ad']); ?></p><p class="text-[10px] text-gray-500">Lvl <?php echo floor($kisi['ToplamXP'] / 100); ?></p></div>
                             </div>
-                            <form action="../service/friend_action.php" method="POST"><input type="hidden" name="target_id" value="<?php echo $kisi['KullaniciID']; ?>"><input type="hidden" name="action" value="send_request"><button class="w-8 h-8 rounded-full bg-gray-700 text-gray-400 hover:bg-primary hover:text-white border border-gray-600 hover:border-primary transition flex items-center justify-center"><i class="fa-solid fa-plus text-xs"></i></button></form>
+                            <form action="../service/friend_action.php" method="POST"><?php echo csrf_alani(); ?><input type="hidden" name="target_id" value="<?php echo $kisi['KullaniciID']; ?>"><input type="hidden" name="action" value="send_request"><button class="w-8 h-8 rounded-full bg-gray-700 text-gray-400 hover:bg-primary hover:text-white border border-gray-600 hover:border-primary transition flex items-center justify-center"><i class="fa-solid fa-plus text-xs"></i></button></form>
                         </li>
                         <?php endforeach; ?>
                     </ul>
@@ -297,8 +299,8 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
                                 <span class="text-sm font-bold text-gray-200"><?php echo htmlspecialchars($istek['Ad']); ?></span>
                             </div>
                             <div class="flex gap-2">
-                                <form action="../service/friend_action.php" method="POST" class="flex-1"><input type="hidden" name="accept_request_id" value="<?php echo $istek['IstekID']; ?>"><button class="w-full bg-green-600 text-white rounded py-1.5 text-xs font-bold hover:bg-green-500 transition">Kabul</button></form>
-                                <form action="../service/friend_action.php" method="POST" class="flex-1"><input type="hidden" name="reject_request_id" value="<?php echo $istek['IstekID']; ?>"><button class="w-full bg-gray-600 text-red-400 border border-gray-500 rounded py-1.5 text-xs font-bold hover:bg-gray-500 transition">Red</button></form>
+                                <form action="../service/friend_action.php" method="POST" class="flex-1"><?php echo csrf_alani(); ?><input type="hidden" name="accept_request_id" value="<?php echo $istek['IstekID']; ?>"><button class="w-full bg-green-600 text-white rounded py-1.5 text-xs font-bold hover:bg-green-500 transition">Kabul</button></form>
+                                <form action="../service/friend_action.php" method="POST" class="flex-1"><?php echo csrf_alani(); ?><input type="hidden" name="reject_request_id" value="<?php echo $istek['IstekID']; ?>"><button class="w-full bg-gray-600 text-red-400 border border-gray-500 rounded py-1.5 text-xs font-bold hover:bg-gray-500 transition">Red</button></form>
                             </div>
                         </li>
                         <?php endforeach; ?>
@@ -347,6 +349,7 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
                 <button onclick="document.getElementById('habitModal').close()" class="text-gray-500 hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <form method="POST" action="">
+                <?php echo csrf_alani(); ?>
                 <div class="space-y-5">
                     <div><label class="block text-xs font-bold text-gray-500 uppercase mb-2">Görev Adı</label><input type="text" name="habit_name" required placeholder="Örn: 30 Sayfa Kitap Oku" class="w-full bg-gray-950 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder-gray-700 transition"></div>
                     <div><label class="block text-xs font-bold text-gray-500 uppercase mb-3">Geliştireceği Yetenek</label><div class="grid grid-cols-2 gap-3"><?php $statList = ['Zeka'=>'book', 'Guc'=>'dumbbell', 'Sosyallik'=>'comments', 'Disiplin'=>'bed', 'Yaraticilik'=>'paintbrush']; $first=true; foreach($statList as $s => $icon): ?><label class="cursor-pointer group"><input type="radio" name="habit_stat" value="<?php echo $s; ?>" class="peer sr-only" <?php echo $first?'checked':''; $first=false; ?>><div class="p-3 border border-gray-700 rounded-lg text-center text-xs font-semibold text-gray-400 bg-gray-800 peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary group-hover:border-gray-500 transition"><i class="fa-solid fa-<?php echo $icon; ?> mb-2 block text-sm"></i> <?php echo $s; ?></div></label><?php endforeach; ?></div></div>
@@ -357,6 +360,8 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
     </dialog>
 
     <script>
+        // AJAX istekleri için CSRF jetonu (X-CSRF-Token başlığında gönderilir).
+        const CSRF_JETONU = <?php echo json_encode(csrf_jetonu()); ?>;
         function openTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -377,7 +382,7 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
 
         function toggleHabit(ka_id, checkbox) {
             const isChecked = checkbox.checked;
-            fetch('ajax_islem.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `ka_id=${ka_id}&durum=${isChecked ? 1 : 0}` })
+            fetch('ajax_islem.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': CSRF_JETONU}, body: `ka_id=${ka_id}&durum=${isChecked ? 1 : 0}` })
             .then(res => res.json()).then(data => {
                 if(!data.success) { alert("Hata: " + data.message); checkbox.checked = !isChecked; } 
                 else {
@@ -394,7 +399,7 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
         function deleteHabit(ka_id, event) {
             event.stopPropagation();
             if(!confirm("Bu görevi silmek istediğine emin misin?")) return;
-            fetch('ajax_islem.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `ka_id=${ka_id}&is_delete=1` })
+            fetch('ajax_islem.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': CSRF_JETONU}, body: `ka_id=${ka_id}&is_delete=1` })
             .then(res => res.json()).then(data => {
                 if(data.success) { const card = document.getElementById(`habit-card-${ka_id}`); card.style.opacity = '0'; card.style.transform = 'scale(0.95)'; setTimeout(() => { card.remove(); }, 300); } 
                 else { alert("Silinemedi: " + data.message); }
@@ -404,7 +409,7 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
         function claimReward(questId, btnElement) {
             fetch('ajax_islem.php', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': CSRF_JETONU},
                 body: `claim_quest_id=${questId}`
             })
             .then(res => res.json())
