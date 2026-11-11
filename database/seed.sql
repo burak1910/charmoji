@@ -85,11 +85,16 @@ SELECT k.KullaniciID, a.AliskanlikID, a.Ad, a.StatTuru, a.Puan, CURDATE()
  WHERE k.Eposta = 'ayse@charmoji.local';
 
 -- Dünkü işaretlemeler (seri 1 olarak görünsün) -------------------------
+-- Yalnızca hiç takip kaydı olmayan alışkanlıklara eklenir; böylece seed
+-- başka bir günde yeniden çalıştırılınca yeni satır eklemez.
 INSERT IGNORE INTO TakipKayitlari (KullaniciAliskanlikID, Tarih, TamamlandiMi)
-SELECT ka.KullaniciAliskanlikID, CURDATE() - INTERVAL 1 DAY, 1
+SELECT ka.KullaniciAliskanlikID, ka.SonIslemTarihi, 1
   FROM KullaniciAliskanliklari ka
   JOIN Kullanicilar k ON k.KullaniciID = ka.KullaniciID
- WHERE k.Eposta = 'deneme@charmoji.local';
+ WHERE k.Eposta = 'deneme@charmoji.local'
+   AND ka.SonIslemTarihi IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM TakipKayitlari t
+                    WHERE t.KullaniciAliskanlikID = ka.KullaniciAliskanlikID);
 
 -- Envanter: Deneme Kahraman büyücü şapkasını almış ve takmış ----------
 INSERT IGNORE INTO KullaniciEnvanteri (KullaniciID, EsyaID, KusandiMi)
