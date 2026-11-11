@@ -15,6 +15,7 @@ session_start();
 $_SESSION['success'] = "Başarıyla çıkış yaptınız. Tekrar bekleriz!";
 
 
-header("Location: /charmoji/view/index.php");
+// Göreli yönlendirme: uygulama hangi alt dizinde servis edilirse edilsin çalışır.
+header("Location: ../view/index.php");
 exit();
 ?>
