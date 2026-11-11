@@ -76,51 +76,55 @@ Ayrıntılar:
 |---|---|---|---|
 | Yetenek kartını aç/kapa | Yükseklik açılır, ok ikonu 180° döner. | 200 ms | Anında |
 | E50'ye K03 sonrası gelmek | Seviye satırı 1 sn altın parıltı. | 1 sn | Yok |
-| Karaktere dokunma | Karargah'taki el sallama tepkisi (02 §3.4) burada balonsuz. | 600 ms | Yok |
+| Karaktere dokunma | Karargah'taki selam tepkisi (02 §3.4) burada balonsuz. | 600 ms | Yok |
 
 ## 5. Görünüm (E51)
+
+Onaylanmış görsel stil: **piksel sanat, karakter büstü (baş + omuz)**. Karakter, ayrı piksel görsellerin üst üste bindirilmesiyle çizilir: ten (baş ve omuz tabanı) → üst giysi → göz → saç → kuşanılmış eşyalar (Kolye → Maske → Gözlük → Şapka). Serbest renk seçimi **yoktur**; her bölge için sınırlı sayıda hazır seçenek vardır ve her seçenek ayrı bir çizimdir (bugünkü renk seçicili `avatar.php` yaklaşımının yerini alır).
 
 ```
 ┌────────────────────────────────────────┐
 │ [<]           Görünüm         [Kaydet] │  gorunum.baslik; Kaydet değişiklik yoksa devre dışı
 ├────────────────────────────────────────┤
-│      [ KARAKTER önizleme 200 px ]      │  yapışkan üst alan, kaydırınca 120 px'e küçülür
+│      [ KARAKTER büst önizleme 200 px ] │  yapışkan üst alan, kaydırınca 120 px'e küçülür
 ├────────────────────────────────────────┤
-│ Ten rengi                              │  gorunum.ten
-│ (o)(o)(o)(o)(o)(o)  [+ Özel renk]      │  6 hazır renk (44 px daire) + özel renk
-│ Saç rengi                              │  gorunum.sac
-│ (o)(o)(o)(o)(o)(o)  [+ Özel renk]      │
-│ Göz rengi                              │  gorunum.goz
-│ ...                                    │
-│ Kıyafet rengi                          │  gorunum.kiyafet
-│ ...                                    │
+│ Ten                     Seçili: Buğday │  gorunum.ten + seçili seçeneğin adı
+│ [▣][▣][▣][▣]                           │  seçenek kutuları (64×64 px küçük büst/parça görseli)
+│ Saç                      Seçili: Kısa… │  gorunum.sac
+│ [▣][▣][▣][▣][▣][▣]                     │  yatay kaydırılabilir şerit
+│ Gözler                                 │  gorunum.goz
+│ [▣][▣][▣]                              │
+│ Üst giysi                              │  gorunum.kiyafet
+│ [▣][▣][▣][▣]                           │
 ├────────────────────────────────────────┤
 │ [              Kaydet              ]   │  ortak.kaydet (sabit alt düğme; mobil)
 └────────────────────────────────────────┘
 ```
 
-Hazır renkler (ilk sütun varsayılan değerlerdir; bugünkü `avatar_renderer.php` varsayılanlarıyla aynı):
+Seçenekler (**VARSAYIM S27**: ten 4, saç 6, göz 3, üst giysi 4 seçenek; ilk seçenek yeni hesabın varsayılanıdır). Görsel adları 01 §2.1'dedir.
 
-| Bölge | 1 | 2 | 3 | 4 | 5 | 6 |
-|---|---|---|---|---|---|---|
-| Ten (`skinColor`) | #F3D2C1 `gorunum.renk_ten_1` | #FDE7D6 `gorunum.renk_ten_2` | #E3B48F `gorunum.renk_ten_3` | #C68A5E `gorunum.renk_ten_4` | #94603D `gorunum.renk_ten_5` | #5E3A24 `gorunum.renk_ten_6` |
-| Saç (`hairColor`) | #2D3436 `gorunum.renk_sac_1` | #6B4226 `gorunum.renk_sac_2` | #E6C46A `gorunum.renk_sac_3` | #B5452B `gorunum.renk_sac_4` | #E8E4F0 `gorunum.renk_sac_5` | #6C5CE7 `gorunum.renk_sac_6` |
-| Göz (`eyeColor`) | #000000 `gorunum.renk_goz_1` | #6B4226 `gorunum.renk_goz_2` | #A0782C `gorunum.renk_goz_3` | #3E8E5A `gorunum.renk_goz_4` | #3A7BD5 `gorunum.renk_goz_5` | #8E8E9E `gorunum.renk_goz_6` |
-| Kıyafet (`topColor`) | #6C5CE7 `gorunum.renk_kiyafet_1` | #3A7BD5 `gorunum.renk_kiyafet_2` | #3E8E5A `gorunum.renk_kiyafet_3` | #D64545 `gorunum.renk_kiyafet_4` | #F2C14E `gorunum.renk_kiyafet_5` | #2D3436 `gorunum.renk_kiyafet_6` |
+| Bölge | Seçenek → metin anahtarı (görsel) |
+|---|---|
+| Ten | 1 `gorunum.secenek_ten_1` (`karakter-ten-1`) · 2 `gorunum.secenek_ten_2` · 3 `gorunum.secenek_ten_3` · 4 `gorunum.secenek_ten_4` |
+| Saç | 1 `gorunum.secenek_sac_1` (`karakter-sac-1`) · 2 `gorunum.secenek_sac_2` · 3 `gorunum.secenek_sac_3` · 4 `gorunum.secenek_sac_4` · 5 `gorunum.secenek_sac_5` · 6 `gorunum.secenek_sac_6` |
+| Gözler | 1 `gorunum.secenek_goz_1` (`karakter-goz-1`) · 2 `gorunum.secenek_goz_2` · 3 `gorunum.secenek_goz_3` |
+| Üst giysi | 1 `gorunum.secenek_ust_1` (`karakter-ust-1`) · 2 `gorunum.secenek_ust_2` · 3 `gorunum.secenek_ust_3` · 4 `gorunum.secenek_ust_4` |
 
-- Seçili renk dairesi: 3 px altın halka + içinde tik; `aria-checked="true"`.
-- `gorunum.ozel_renk`: tarayıcının renk seçicisini açar; seçilen renk, satırın sonunda 7. daire olarak görünür ve seçili olur. Kayıtlı renk hazır renklerden biri değilse açılışta bu 7. daire dolu gelir.
-- Önizleme her seçimde anında güncellenir (sunucu isteği yok).
+- Seçenek kutusu: panel zeminli 64×64 px kutu, içinde o seçeneğin küçük görseli (ten ve üst giysi için küçük büst, saç ve göz için oyuncunun mevcut teni üzerinde yakın plan). Seçili kutu: 3 px altın kenarlık + köşede tik; `aria-checked="true"`.
+- Bölge başlığının sağında seçili seçeneğin adı yazılır (bilgi yalnızca görselle verilmez).
+- Önizleme her seçimde anında güncellenir (sunucu isteği yok). Kuşanılmış eşyalar önizlemede görünür kalır; eşyayı değiştirmek Çanta'dan (E52) yapılır.
+- Görseller tam sayı katlarıyla büyütülür (`image-rendering: pixelated`), bulanık ölçekleme yapılmaz.
+- Bugünkü hesaplarda kayıtlı serbest renkler (`skinColor` vb.) yeni seçeneklere eşlenmelidir: **VARSAYIM S28**: her bölge varsayılan seçeneğe (1) döner; oyuncu ilk girişte fark eder ve dilerse değiştirir.
 
 ### 5.1 Akış
 
-1. Oyuncu renk seçer → önizleme değişir, "Kaydet" etkinleşir.
+1. Oyuncu bir seçenek kutusuna dokunur → önizleme değişir, "Kaydet" etkinleşir.
 2. "Kaydet" → G06 → başarı: G03 `gorunum.kaydedildi_bildirim`; "Kaydet" yeniden devre dışı; E50'ye dönülmez (oyuncu devam edebilir).
 3. Kaydetmeden geri: değişiklik varsa M07 (`ortak.kaydedilmedi_baslik`, `ortak.kaydedilmedi_aciklama`, birincil `ortak.kaydedilmedi_kal`, ikincil `ortak.kaydedilmedi_cik`). "Kaydetmeden çık" → E50, değişiklikler atılır.
-4. Hata: sunucu rengi reddederse (geçersiz değer) `gorunum.hata_gecersiz_renk`; diğer `gorunum.hata_kaydedilemedi`; seçimler korunur.
+4. Hata: sunucu seçeneği reddederse (listede olmayan değer) `gorunum.hata_gecersiz_secenek` ve o bölge kayıtlı seçeneğe döner; diğer hatalarda `gorunum.hata_kaydedilemedi`, seçimler korunur.
 5. İstek başarısız: seçimler korunur, G03 `ortak.istek_basarisiz` + `ortak.tekrar_dene`.
 
-Sunucu yalnızca `#RRGGBB` biçimindeki renkleri kabul etmelidir (bugünkü kod doğrulamıyor; rapora bakınız).
+Sunucu yalnızca tanımlı seçenek kimliklerini kabul etmelidir (bugünkü kod gelen değeri hiç doğrulamadan saklıyor; rapora bakınız).
 
 ## 6. Çanta (E52)
 
@@ -149,7 +153,7 @@ Sunucu yalnızca `#RRGGBB` biçimindeki renkleri kabul etmelidir (bugünkü kod 
 2. "Kuşan" → G06 → başarı: eşya kuşanılır (tür başına tek: aynı türdeki eski eşya otomatik çıkarılır), ızgarada rozetler güncellenir, ekran okuyucu `ortak.kusanildi_bildirim`; görsel bildirim olarak G03 `ortak.kusanildi_bildirim`.
 3. "Çıkar" → G06 → başarı: eşya çıkarılır, G03 `ortak.cikarildi_bildirim`.
 4. Hata: `ortak.hata_kusanilamadi` / `ortak.hata_cikarilamadi`; önizleme ve rozetler kayıtlı duruma döner.
-5. Bugünkü koddan fark: eşya ekrana **sunucu onayından sonra** kalıcı olarak çizilir (bugün önce çizilip hata sessizce yutuluyor); kuşanılmış eşya çıkarılabilir (bugün çıkarma yok).
+5. Bugünkü koddan fark: eşya ekrana **sunucu onayından sonra** kalıcı olarak çizilir (bugün önce çizilip hata sessizce yutuluyor); kuşanılmış eşya çıkarılabilir (bugün çıkarma yok; **VARSAYIM S23**).
 
 Bildirimdeki "Kuşan" eylemiyle (K07) gelindiyse ilgili eşya seçili ve kuşanma isteği zaten gönderilmiş olarak açılır.
 
@@ -157,36 +161,47 @@ Bildirimdeki "Kuşan" eylemiyle (K07) gelindiyse ilgili eşya seçili ve kuşanm
 
 | Durum | E50 Karakter | E51 Görünüm | E52 Çanta |
 |---|---|---|---|
-| Boş | Hiç kuşanılmış eşya yoksa dört yuva da boş silüet (hata değil). Görevi olmayan yetenek kartında `karakter.yetenek_gorev_yok`. | Geçerli değil (her zaman varsayılan renkler vardır). | `bos-canta` + `canta.bos_baslik` + `canta.bos_aciklama` + düğme `canta.bos_dugme` (→ E30). Filtre boşsa `bos-filtre` + `canta.filtre_bos`. |
+| Boş | Hiç kuşanılmış eşya yoksa dört yuva da boş silüet (hata değil). Görevi olmayan yetenek kartında `karakter.yetenek_gorev_yok`. | Geçerli değil (her bölgede her zaman bir seçenek seçilidir). | `bos-canta` + `canta.bos_baslik` + `canta.bos_aciklama` + düğme `canta.bos_dugme` (→ E30). Filtre boşsa `bos-filtre` + `canta.filtre_bos`. |
 | Yükleniyor | Sunucuda çizilir; geçerli değil. | "Kaydet"te G06. | Kuşan/Çıkar'da G06; ikonlar için G05 iskelet. |
-| Hata | Sayfa verisi alınamazsa `ortak.sayfa_hatasi_baslik` + `ortak.sayfa_hatasi_aciklama` + `ortak.yeniden_yukle`. | `gorunum.hata_gecersiz_renk`, `gorunum.hata_kaydedilemedi` (önizlemenin altında hata kutusu). | `ortak.hata_kusanilamadi`, `ortak.hata_cikarilamadi`. |
-| İstek başarısız / çevrimdışı | G04; "Çıkış yap" devre dışı. | G04; renk seçimi çalışır, "Kaydet" devre dışı (`ortak.cevrimdisi_islem`). Zaman aşımında `ortak.istek_basarisiz`. | G04; seçim ve önizleme çalışır, Kuşan/Çıkar devre dışı. |
-| Kilitli | Geçerli değil. | Geçerli değil (tüm renkler ücretsiz ve açık). | Geçerli değil (çantadaki her eşya kuşanılabilir; seviye kilidi yalnızca satın almada). |
+| Hata | Sayfa verisi alınamazsa `ortak.sayfa_hatasi_baslik` + `ortak.sayfa_hatasi_aciklama` + `ortak.yeniden_yukle`. | `gorunum.hata_gecersiz_secenek`, `gorunum.hata_kaydedilemedi` (önizlemenin altında hata kutusu). Seçenek görseli yüklenemezse kutuda seçenek adı yazılı düz kutu. | `ortak.hata_kusanilamadi`, `ortak.hata_cikarilamadi`. |
+| İstek başarısız / çevrimdışı | G04; "Çıkış yap" devre dışı. | G04; seçenek seçimi ve önizleme çalışır, "Kaydet" devre dışı (`ortak.cevrimdisi_islem`). Zaman aşımında `ortak.istek_basarisiz`. | G04; seçim ve önizleme çalışır, Kuşan/Çıkar devre dışı. |
+| Kilitli | Geçerli değil. | Geçerli değil (tüm seçenekler ücretsiz ve açık; kilitli seçenek 09'da öneri). | Geçerli değil (çantadaki her eşya kuşanılabilir; seviye kilidi yalnızca satın almada). |
 | Başarı | Geçerli değil (salt bilgi); çıkışta `tanitim.cikis_bildirim`. | `gorunum.kaydedildi_bildirim`. | `ortak.kusanildi_bildirim`, `ortak.cikarildi_bildirim`. |
+
+### 7.1 Onay alt sayfaları (M07, M08)
+
+| Durum | M07 Kaydedilmemiş değişiklik | M08 Çıkış onayı |
+|---|---|---|
+| Boş | Geçerli değil (yalnızca değişiklik varken açılır). | Geçerli değil. |
+| Yükleniyor | Geçerli değil (istek yok). | "Çıkış yap"ta G06. |
+| Hata | Geçerli değil. | Çıkış başarısızsa M08 açık kalır, açıklama yerine `ortak.hata_genel`. |
+| İstek başarısız | Geçerli değil. | M08 kapanır, G03 `ortak.istek_basarisiz`. |
+| Kilitli | Geçerli değil. | Çevrimdışıyken açılmaz (`ortak.cevrimdisi_islem`). |
+| Başarı | "Kaydetmeden çık" → önceki ekran; "Düzenlemeye dön" → modal kapanır. | E00 + `tanitim.cikis_bildirim`. |
 
 ## 8. Geri alma kuralları
 
-- Görünüm: kaydedilene kadar her şey geri alınabilir (M07 ile atılır). Kaydedildikten sonra eski renkler yeniden seçilerek dönülür; ayrı "geri al" yok.
+- Görünüm: kaydedilene kadar her şey geri alınabilir (M07 ile atılır). Kaydedildikten sonra eski seçenekler yeniden seçilerek dönülür; ayrı "geri al" yok.
 - Kuşanma/çıkarma: karşı işlemle geri alınır.
 - Çıkış: M08 onayı; çıkış sonrası yeniden giriş gerekir.
 
 ## 9. Erişilebilirlik
 
 - Sayfa başlığı (`<h1>`, görsel olarak üst barda): `karakter.baslik`; alt ekranlarda `gorunum.baslik`, `canta.baslik`.
-- Karakter görseli `role="img"`, `aria-label` = `karakter.karakter_etiketi`.
+- Karakter görseli (piksel büst) `role="img"`, `aria-label` = `karakter.karakter_etiketi`.
 - Yetenek kartı başlığı `button` + `aria-expanded`; bar `role="progressbar"` + `ortak.yetenek_bar_etiketi`.
 - Eşya yuvaları: `button`; erişilebilir adı dolu yuvada `karakter.yuva_etiketi`, boşta `karakter.yuva_bos_etiketi`.
-- Renk seçimi: her bölge bir `radiogroup` (`aria-label` = bölge adı), her daire `role="radio"` + `aria-label` = renk adı (§5 tablosundaki `gorunum.renk_…` anahtarları); ok tuşlarıyla gezilir. Seçili rengin adı görünür metin olarak da bölge başlığının yanında yazılır (yalnızca renkle anlatmamak için).
+- Görünüm seçimi: her bölge bir `radiogroup` (`aria-label` = bölge adı), her kutu `role="radio"` + `aria-label` = seçenek adı (§5 tablosundaki seçenek anahtarları); ok tuşlarıyla gezilir. Seçili seçeneğin adı görünür metin olarak bölge başlığının yanında da yazılır (`gorunum.secili`).
 - Çanta ızgarası: her eşya `button` + `aria-pressed` (seçili), adı `canta.esya_etiketi`.
 - Odak: E51/E52 açılınca başlığa; kapanınca açan düğmeye.
-- Dokunma hedefleri: renk daireleri 44 px (aralarında 8 px), eşya kutuları en az 96×112 px, yuvalar 64 px.
+- Dokunma hedefleri: seçenek kutuları 64 px (aralarında 8 px), eşya kutuları en az 96×112 px, yuvalar 64 px.
 
 ## 10. Veri ihtiyacı
 
 | Bilgi | Bugünkü kodda | Not |
 |---|---|---|
 | Kahraman adı, e-posta (maskeli gösterim için) | Var | |
-| Görünüm renkleri | Var (`AvatarVerisi`) | Kayıt sırasında boşsa varsayılanlar |
+| Görünüm seçenekleri (ten, saç, göz, üst giysi) | Kısmen (`AvatarVerisi` serbest renk tutuyor) | **YENİ VERİ**: bölge başına seçenek kimliği; boşsa 1 numaralı seçenekler |
 | Karakter seviyesi, sonraki seviye için kalan yetenek seviyesi | Seviye var; kalan yeni | **YENİ VERİ** (hesaplanan) |
 | Beş yeteneğin seviyesi, seviye içi XP, gereken XP | Var (hesaplanıyor) | |
 | Her yeteneğe bağlı aktif görev sayısı | Yok | **YENİ VERİ** (hesaplanan) |
@@ -194,7 +209,7 @@ Bildirimdeki "Kuşan" eylemiyle (K07) gelindiyse ilgili eşya seçili ve kuşanm
 
 | İşlem | Bugünkü kodda | Başarı yanıtı | Ret gerekçeleri |
 |---|---|---|---|
-| Görünümü kaydet | Var (`save_avatar_colors`) | Kaydedilen renkler | Geçersiz renk biçimi |
+| Görünümü kaydet | Var (`save_avatar_colors`, renk tabanlı) | Kaydedilen seçenekler | Tanımsız seçenek |
 | Kuşan | Var (`equip_item_id`) | Kuşanılan ve (varsa) çıkarılan eşya | Sahip değil, eşya yok |
 | Çıkar | Yok | Çıkarılan eşya | Kuşanılmamış |
 | Çıkış yap | Var (`service/logout.php`) | E00'a yönlendirme + çıkış bildirimi | – |

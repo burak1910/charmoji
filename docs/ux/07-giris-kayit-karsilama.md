@@ -120,7 +120,7 @@ Doğrulama: alan odaktan çıkınca ve gönderimde. Gönderimde birden fazla hat
 ### 3.3 Akış
 
 1. Oyuncu alanları doldurur → "Hesap oluştur" → G06.
-2. Başarı: hesap oluşur, oturum açılır, E03a'ya gidilir. Yeni hesabın görünümü varsayılan renklerle, beş yeteneği 0 XP ile başlar.
+2. Başarı: hesap oluşur, oturum açılır, E03a'ya gidilir. Yeni hesabın görünümü 1 numaralı seçeneklerle, beş yeteneği 0 XP ile başlar.
 3. Hata: sayfa yeniden çizilir; şifre alanları boşaltılır, diğerleri korunur; ilgili alanın altında hata.
 
 ### 3.4 Durumlar
@@ -143,17 +143,17 @@ Yalnızca kayıttan sonra bir kez gösterilir. Her adımın üstünde ilerleme n
 ```
 │ ● ○ ○  Adım 1/3                  Atla │
 │        Karakterini oluştur            │  karsilama.karakter_baslik
-│ Rengini seç. İstediğin zaman…         │  karsilama.karakter_aciklama
+│ Görünümünü seç. İstediğin zaman…      │  karsilama.karakter_aciklama
 │      [ KARAKTER önizleme 200 px ]     │
-│ Ten (o)(o)(o)(o)(o)(o)                │  06 §5'teki hazır renkler (özel renk yok)
-│ Saç (o)(o)(o)(o)(o)(o)                │
-│ Göz (o)(o)(o)(o)(o)(o)                │
-│ Kıyafet (o)(o)(o)(o)(o)(o)            │
+│ Ten [▣][▣][▣][▣]                      │  06 §5'teki hazır seçenekler
+│ Saç [▣][▣][▣][▣][▣][▣]                │
+│ Göz [▣][▣][▣]                         │
+│ Üst [▣][▣][▣][▣]                      │
 │ [             Devam              ]    │  karsilama.devam
 ```
 
-- Bileşen E51 ile aynı (06 §5), yalnızca hazır renkler; bölge adları `gorunum.ten`, `gorunum.sac`, `gorunum.goz`, `gorunum.kiyafet`.
-- "Devam" → görünüm kaydedilir (G06) → E03b. "Atla" → varsayılan renkler kalır → E03b.
+- Bileşen E51 ile aynı (06 §5: piksel büst, hazır seçenekler); bölge adları `gorunum.ten`, `gorunum.sac`, `gorunum.goz`, `gorunum.kiyafet`.
+- "Devam" → görünüm kaydedilir (G06) → E03b. "Atla" → 1 numaralı seçenekler kalır → E03b.
 - Kaydetme hatası: adımda kalınır, hata kutusu `gorunum.hata_kaydedilemedi`; istek başarısız: G03 `ortak.istek_basarisiz`.
 
 ### 4.2 E03b · İlk görevin
@@ -189,7 +189,7 @@ Yalnızca kayıttan sonra bir kez gösterilir. Her adımın üstünde ilerleme n
 
 | Durum | E03a | E03b | E03c |
 |---|---|---|---|
-| Boş | Varsayılan renkler seçili. | Alanlar boş. | Geçerli değil (statik). |
+| Boş | 1 numaralı seçenekler seçili. | Alanlar boş. | Geçerli değil (statik). |
 | Yükleniyor | "Devam"da G06. | "Görevi ekle"de G06. | "Maceraya başla"da G06. |
 | Hata | `gorunum.hata_kaydedilemedi` | `gorev_form.hata_ad_bos`, `gorev_form.hata_ad_uzun`, `gorev_form.hata_yetenek_yok`, `gorev_form.hata_kaydedilemedi` | `ortak.hata_genel` (yine de Karargah'a geçilir; karşılama bir sonraki girişte tekrar gösterilmez) |
 | İstek başarısız / çevrimdışı | G04; "Devam" devre dışı; "Atla" çalışır. | G04; "Görevi ekle" devre dışı; "Atla" çalışır. | G04; düğme devre dışı. |

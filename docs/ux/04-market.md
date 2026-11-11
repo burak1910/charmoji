@@ -119,7 +119,16 @@ Arka uç, istemcinin gösterdiğinden bağımsız olarak **altını ve seviye ki
 
 G07: başlık `market.satin_al_onay_baslik`; açıklama `market.satin_al_onay_aciklama`; not `market.satin_al_onay_not`; birincil `market.satin_al_onay_dugme`; ikincil `ortak.vazgec` (varsayılan odak).
 
-Satın alma geri alınamaz (bugünkü kural; iade yok).
+Satın alma geri alınamaz (bugünkü kural; iade yok; **VARSAYIM S21**).
+
+| Durum | M05 |
+|---|---|
+| Boş | Geçerli değil. |
+| Yükleniyor | "Satın al"da G06; "Vazgeç" devre dışı. |
+| Hata | M05 kapanır, E31'de hata kutusu (§3.2). |
+| İstek başarısız | M05 kapanır, G03 `ortak.istek_basarisiz` (§3.2). |
+| Kilitli | Seviye kilitli ya da altın yetmiyorsa M05 hiç açılmaz (E31'de düğme yok). |
+| Başarı | K07 (§7). |
 
 ## 7. Satın alma başarısı (K07)
 
@@ -170,7 +179,7 @@ Satın alma geri alınamaz (bugünkü kural; iade yok).
 | Oyuncu bu eşyaya sahip mi, kuşanılmış mı | Sahiplik var; kuşanma Market'te sorgulanmıyor | Kuşanma bilgisi Market'e eklenmeli |
 | Karakter seviyesi (00 §1.4 formülüyle) | Var ama **farklı formülle** hesaplanıyor | Tek formül kullanılmalı (rapora bakınız) |
 | Altın | Var | Tam sayı |
-| Görünüm renkleri ve kuşanılmış eşyalar (deneme önizlemesi için) | Var (`AvatarVerisi`, envanter) | |
+| Görünüm seçenekleri ve kuşanılmış eşyalar (deneme önizlemesi için) | Kısmen (`AvatarVerisi` renk tutuyor; envanter var) | Seçenek kimlikleri **YENİ VERİ** (06 §5) |
 | Son karakter seviyesi atlamasında açılan eşyalar | Yok | **YENİ VERİ** (K03'ten gelen bilgi; sayfa parametresi ile taşınabilir) |
 
 | İşlem | Bugünkü kodda | Başarı yanıtı | Ret gerekçeleri |

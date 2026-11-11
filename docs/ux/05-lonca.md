@@ -60,7 +60,8 @@ Satıra dokunma: arkadaş satırı → E44; oyuncunun kendi satırı → E50.
 ## 4. Arkadaşlar (E40b)
 
 - Üstte `lonca.arkadaslar_sayi`.
-- Satır (en az 64 px): 48 px karakter, kahraman adı, `ortak.seviye_kisa`, bu haftaki XP (`lonca.siralama_xp`), sağda ok ikonu. Satır → E44.
+- Satır (en az 64 px): 48 px karakter, kahraman adı, `ortak.seviye_kisa`, bu haftaki XP (`lonca.siralama_xp`), sağda menü düğmesi (⋯, 44×44 px, erişilebilir adı `lonca.arkadas_menu_etiketi`). Satırın geri kalanı → E44.
+- Menü tek seçenek içerir: `lonca.profil_cikar` (hata renginde) → M06. Akış §7.1.
 - Sıra: kahraman adına göre alfabetik.
 
 ## 5. İstekler (E40c)
@@ -129,10 +130,30 @@ Satıra dokunma: arkadaş satırı → E44; oyuncunun kendi satırı → E50.
 ```
 
 - Görünen bilgiler (**VARSAYIM S14**): görünüm, kuşanılmış eşyalar, karakter seviyesi, beş yetenek seviyesi ve seviye içi ilerleme oranı, bu haftanın XP'si ve sırası. Görev adları, seriler, altın, e-posta **görünmez**.
-- "Arkadaşlıktan çıkar" → M06 (G07): başlık `lonca.cikar_onay_baslik`, açıklama `lonca.cikar_onay_aciklama`, birincil (tehlikeli) `lonca.cikar_onay_dugme`, ikincil `ortak.vazgec` (varsayılan odak).
-- Başarı: E44 kapanır, Arkadaşlar listesine dönülür, satır kaldırılmış olur; G03 `lonca.cikarildi_bildirim`. Geri alma yok (yeniden istek gönderilebilir).
-- Hata: G03 `lonca.cikar_hata`; zaten arkadaş değilse E44 yerine `lonca.profil_hata_yok` gösterilir ve geri düğmesi.
-- Sunucu, çıkarma işleminde oyuncunun bu arkadaşlığın tarafı olduğunu denetlemelidir (bugünkü kod denetlemiyor; rapora bakınız).
+### 7.1 Arkadaşlıktan çıkarma akışı (onaylı)
+
+Arka uçta arkadaş silme artık **reddetmeden ayrı** bir işlemdir; arayüz yalnızca bu işlemi kullanır (istek reddi `lonca.istek_reddet` ile karıştırılmaz).
+
+Giriş noktaları: E44 altındaki `lonca.profil_cikar` düğmesi ya da E40b satır menüsündeki `lonca.profil_cikar`.
+
+1. Oyuncu "Arkadaşlıktan çıkar"a dokunur → M06 (G07) açılır: başlık `lonca.cikar_onay_baslik`, açıklama `lonca.cikar_onay_aciklama`, birincil (tehlikeli: `hata` renginde kenarlık + metin) `lonca.cikar_onay_dugme`, ikincil `ortak.vazgec`. Varsayılan odak "Vazgeç"te; Esc ve arka plana dokunma "Vazgeç" sayılır.
+2. "Vazgeç" → M06 kapanır, hiçbir şey değişmez, odak çıkarma düğmesine döner.
+3. "Çıkar" → birincil düğmede G06; ikincil düğme devre dışı.
+4. Başarı: M06 kapanır. E44'ten gelindiyse E44 kapanıp Arkadaşlar listesine dönülür; E40b'den gelindiyse satır 300 ms'de yükseklik kapanarak kaybolur (hareket azaltmada anında). `lonca.arkadaslar_sayi` güncellenir; kişi Sıralama'dan çıkar. G03 `lonca.cikarildi_bildirim`. Ekran okuyucu (`polite`): `lonca.cikarildi_bildirim`. Liste boşaldıysa E40b boş durumu.
+5. Hata (sunucu reddetti): M06 açık kalır, açıklamanın yerine `lonca.cikar_hata`; birincil düğme tekrar etkin. Arkadaşlık zaten yoksa (başka cihazda çıkarılmış ya da karşı taraf çıkarmış) M06 kapanır, satır kaldırılır, G03 `lonca.profil_hata_yok`.
+6. İstek başarısız: M06 kapanır, hiçbir şey değişmez, G03 `ortak.istek_basarisiz` + `ortak.tekrar_dene` (yeniden M06 açar).
+7. Çevrimdışı: çıkarma düğmeleri devre dışı, dokununca `ortak.cevrimdisi_islem`.
+
+| Durum | M06 |
+|---|---|
+| Boş | Geçerli değil. |
+| Yükleniyor | Adım 3. |
+| Hata | Adım 5. |
+| İstek başarısız / çevrimdışı | Adım 6–7. |
+| Kilitli | Geçerli değil. |
+| Başarı | Adım 4. |
+
+Kurallar: Geri alma yok (yeniden istek gönderilerek arkadaş olunur). Karşı tarafa bildirim gitmez. Sunucu, oyuncunun bu arkadaşlığın tarafı olduğunu denetlemelidir.
 
 ## 8. Etkileşim ve geri bildirim anları
 
@@ -150,9 +171,9 @@ Satıra dokunma: arkadaş satırı → E44; oyuncunun kendi satırı → E50.
 | Boş | Arkadaş yoksa yalnızca oyuncunun satırı + `bos-lonca` + `lonca.siralama_tek_baslik` + `lonca.siralama_tek_aciklama` + düğme `lonca.siralama_tek_dugme` (→ E40d). Herkes 0 XP ise liste + üstte `lonca.siralama_sifir`. | `bos-lonca` + `lonca.arkadaslar_bos_baslik` + `lonca.arkadaslar_bos_aciklama` + `lonca.arkadaslar_bos_dugme`. | `bos-istek` + `lonca.istekler_bos`. | Öneri yoksa `lonca.oneriler_bos`; arama sonucu yoksa `bos-arama` + `lonca.arama_sonuc_yok`. | Geçerli değil. |
 | Yükleniyor | Sunucuda çizilir; geçerli değil. | Sunucuda çizilir; geçerli değil. | Kabul/Reddet düğmelerinde G06. | Arama sırasında 3 satırlık G05 iskelet; "İstek gönder"de G06. | Sunucuda çizilir; "Çıkar"da G06. |
 | Hata | Sayfa verisi alınamazsa `ortak.sayfa_hatasi_baslik` + `ortak.sayfa_hatasi_aciklama` + `ortak.yeniden_yukle` (tüm Lonca için ortak). | Aynı. | §5.1: `lonca.istek_hata_artik_yok`, `lonca.istek_hata_islenemedi`. | `lonca.arama_hata` (sonuç alanında, `hata-genel` 96 px ile); §6.1 hataları. | `lonca.profil_hata_yok`, `lonca.cikar_hata`. |
-| İstek başarısız / çevrimdışı | G04 bandı; liste son hâliyle görünür. | Aynı. | Düğmeler devre dışı; `ortak.cevrimdisi_islem`. | Arama kutusu devre dışı; altında `ortak.cevrimdisi_bandi`. | "Çıkar" devre dışı. |
+| İstek başarısız / çevrimdışı | G04 bandı; liste son hâliyle görünür. | G04; satır menüsündeki çıkarma devre dışı (§7.1 adım 6–7). | Düğmeler devre dışı; `ortak.cevrimdisi_islem`. | Arama kutusu devre dışı; altında `ortak.cevrimdisi_bandi`. | "Çıkar" devre dışı. |
 | Kilitli | Geçerli değil. | Geçerli değil. | Geçerli değil. | Gönderilmiş istek satırında düğme `lonca.istek_gonderildi` (devre dışı). | Arkadaş olmayan profil açılamaz (`lonca.profil_hata_yok`). |
-| Başarı | Geçerli değil (salt bilgi). | Geçerli değil. | `lonca.istek_kabul_bildirim`, `lonca.istek_red_bildirim`. | `lonca.istek_gonderildi_bildirim`. | `lonca.cikarildi_bildirim`. |
+| Başarı | Geçerli değil (salt bilgi). | Arkadaşlıktan çıkarma: `lonca.cikarildi_bildirim` (§7.1). | `lonca.istek_kabul_bildirim`, `lonca.istek_red_bildirim`. | `lonca.istek_gonderildi_bildirim`. | `lonca.cikarildi_bildirim`. |
 
 ## 10. Geri alma kuralları
 
@@ -166,7 +187,7 @@ Satıra dokunma: arkadaş satırı → E44; oyuncunun kendi satırı → E50.
 - Sayfa başlığı (`<h1>`, görsel olarak üst barda): `lonca.baslik`.
 - İç sekmeler: `role="tablist"` / `role="tab"` / `role="tabpanel"`, ok tuşlarıyla gezilir; seçili sekme `aria-selected="true"`.
 - Sıralama gerçek bir sıralı listedir (`<ol>`); her satırın erişilebilir adı `lonca.siralama_satir_etiketi`; kupalar `aria-hidden`; oyuncunun satırı `aria-current="true"`.
-- Arkadaş satırı: bağlantı, erişilebilir adı `lonca.arkadas_satir_etiketi`.
+- Arkadaş satırı: bağlantı, erişilebilir adı `lonca.arkadas_satir_etiketi`; ayrı menü düğmesi `lonca.arkadas_menu_etiketi` (`aria-haspopup="menu"`).
 - Arama kutusu: görünür etiket `lonca.arama_etiketi`, `type="search"`; sonuç sayısı değişince `polite` duyuru: `lonca.arama_sonuc_sayisi`.
 - İstek kartındaki düğmeler kişinin adını içeren erişilebilir ad alır: `lonca.istek_kabul_etiketi`, `lonca.istek_reddet_etiketi`.
 - Sonuç satırındaki düğme: `lonca.istek_gonder_etiketi`.
@@ -190,4 +211,4 @@ Satıra dokunma: arkadaş satırı → E44; oyuncunun kendi satırı → E50.
 | İstek gönder | Var (`send_request`) | Başarı | Kendine, zaten var, karşı taraf göndermiş, kullanıcı yok |
 | Kabul et | Var (`accept_request_id`) | Yeni arkadaşın satır verisi | İstek yok / bu oyuncuya değil |
 | Reddet | Var (`reject_request_id`) | Başarı | İstek yok / bu oyuncuya değil |
-| Arkadaşlıktan çıkar | Var (`removeFriend`, arayüzü yok) | Başarı | Arkadaşlık yok / oyuncu taraf değil |
+| Arkadaşlıktan çıkar | Var (arka uçta reddetmeden ayrı silme işlemi; arayüzü yok) | Başarı, kalan arkadaş sayısı | Arkadaşlık yok / oyuncu taraf değil |

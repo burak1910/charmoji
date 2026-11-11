@@ -260,6 +260,15 @@ Alt sayfa. Görev kartındaki seri/bonus alanından açılır.
 
 G07: başlık `gorevler.geri_al_onay_baslik`, açıklama `gorevler.geri_al_onay_aciklama`, birincil `gorevler.geri_al_onay_dugme`, ikincil `ortak.vazgec` (varsayılan odak).
 
+| Durum | M04 |
+|---|---|
+| Boş | Geçerli değil. |
+| Yükleniyor | Birincil düğmede G06. |
+| Hata | M04 kapanır; §8.3 adım 3. |
+| İstek başarısız | M04 kapanır; §8.3 adım 4. |
+| Kilitli | Gün değiştiyse M04 açılmaz; `gorevler.hata_gun_bitti` ve sayfa yenilenir. |
+| Başarı | §8.3 adım 2. |
+
 ### 8.3 Geri alma geri bildirimi
 
 1. Onay kutusu hemen boşalır (basılma tepkisi), istek gider.
@@ -280,7 +289,7 @@ T0 = dokunma anı, T = sunucunun başarılı yanıt anı.
 | T0 + 400 ms (yanıt yoksa) | Onay kutusunda dönen ikon. | Yanıta kadar (en fazla 10 sn, sonra "istek başarısız") |
 | T | Tik çizilir; kart "Tamamlandı" hâline geçer; ödül metni `gorevler.kart_kazanildi`. | 150 ms |
 | T | **K01 – uçan XP**: "+{xp} XP" (piksel font, 20 px, altın) karttan yükselir ve hedefe uçar: E10'da ilgili mini yetenek barı; E20'de ekranın üstünde beliren **yetenek şeridi** (aşağıda). Hedefe varınca kaybolur. | 700 ms, ease-out |
-| T | E10'da karakter zıplar (`karakter-ziplama`). | 600 ms |
+| T | E10'da karakter seker (`karakter-sekme`). | 600 ms |
 | T | Bildirim: `gorevler.tamamlandi_bildirim` + `ortak.geri_al`. | 5 sn |
 | T + 700 ms | **Bar dolar**: ilgili yetenek barı yeni değere dolar. Seri sayısı yukarı kayarak artar. | 500 ms / 300 ms |
 | T + 700 ms | **K04** (yalnızca çarpan bu tamamlamayla yükseldiyse, yani yeni seri 7, 14, 21 veya 28 ise): karttaki bonus rozeti 1 → 1,3 → 1 ölçekte parlar, alev ikonu bir boy büyür. Bildirim kuyruğuna `kutlama.seri_bonus` + `kutlama.seri_bonus_aciklama`. | 600 ms |
@@ -303,7 +312,7 @@ T0 = dokunma anı, T = sunucunun başarılı yanıt anı.
 |---|---|
 | Basılma ölçeği, titreşim | Yok; kutu anında dolar. |
 | Uçan "+XP" | Yok. Kartın ödül alanı anında `gorevler.kart_kazanildi` olur. |
-| Karakter zıplama | Yok; ifade anında değişir. |
+| Karakter sekmesi | Yok; ifade anında değişir. |
 | Bar dolması | 150 ms opaklık geçişiyle yeni değer. |
 | K04 parlama | Yok; rozet anında yeni değer; bildirim yine gösterilir. |
 | K02 | Bar doğrudan yeni değer; bant hareketsiz 2,5 sn görünür. |

@@ -74,7 +74,7 @@ Ruh hali sayfa açılışında sunucudan gelen veriyle hesaplanır, görev tamam
 
 1. Oyuncu Karargah'ı açar. Karakter "hazır" ifadesinde, balon `karargah.ruh_hali_hazir`.
 2. "Sıradaki görevler"deki kartın onay kutusuna (ya da kartın herhangi bir yerine) dokunur.
-3. K01 oynar (03 §9): onay kutusu dolar, sunucu onaylar, "+13 XP" karttan ilgili **mini yetenek barına** uçar, bar dolar, karakter zıplar, ifadesi "neşeli"ye döner, günün ilerleme barı ilerler, sandık kartındaki "kalan" sayısı azalır.
+3. K01 oynar (03 §9): onay kutusu dolar, sunucu onaylar, "+13 XP" karttan ilgili **mini yetenek barına** uçar, bar dolar, karakter seker, ifadesi "neşeli"ye döner, günün ilerleme barı ilerler, sandık kartındaki "kalan" sayısı azalır.
 4. Bildirim (G03): `gorevler.tamamlandi_bildirim` + `ortak.geri_al` (5 sn).
 5. Kart 1,2 sn sonra listeden çıkar.
 
@@ -98,16 +98,16 @@ Ruh hali sayfa açılışında sunucudan gelen veriyle hesaplanır, görev tamam
 
 ### 3.4 Karaktere dokunma
 
-1. Oyuncu karaktere dokunur → karakter el sallar (`karakter-el-salla`, 600 ms) ve balon metni `karargah.dokunma_sozu_1`, `karargah.dokunma_sozu_2`, `karargah.dokunma_sozu_3`, `karargah.dokunma_sozu_4`, `karargah.dokunma_sozu_5` arasından rastgele (bir önceki ile aynı olmayan) biriyle değişir. 4 sn sonra balon ruh hali metnine döner.
+1. Oyuncu karaktere dokunur → karakter göz kırpıp gülümser (`karakter-selam`, 600 ms) ve balon metni `karargah.dokunma_sozu_1`, `karargah.dokunma_sozu_2`, `karargah.dokunma_sozu_3`, `karargah.dokunma_sozu_4`, `karargah.dokunma_sozu_5` arasından rastgele (bir önceki ile aynı olmayan) biriyle değişir. 4 sn sonra balon ruh hali metnine döner.
 2. Art arda dokunmada animasyon yeniden başlamaz, yalnızca metin değişir (en fazla saniyede bir).
-3. Hareket azaltmada el sallama yok; yalnızca balon metni değişir.
+3. Hareket azaltmada selam animasyonu yok; yalnızca balon metni değişir.
 4. Klavye: karakter bir `button`dur (`karargah.karakter_etiketi`); Enter/Boşluk aynı tepkiyi verir. Balon metni `aria-live="polite"` alanındadır.
 
 ## 4. Etkileşim ve geri bildirim anları
 
 | Tetik | Ne olur (sıra ve süre) | Hareket azaltma karşılığı |
 |---|---|---|
-| Görev tamamlama | K01 (03 §9). Karargah'a özgü: "+XP" hedefi ilgili **mini yetenek barı**; karakter zıplar (600 ms, K01'in T+0 anında); ruh hali yeniden hesaplanır; günün ilerleme barı 400 ms'de dolar; sandık kartındaki kalan sayısı güncellenir. | Uçuş ve zıplama yok; değerler 150 ms opaklık geçişiyle güncellenir. |
+| Görev tamamlama | K01 (03 §9). Karargah'a özgü: "+XP" hedefi ilgili **mini yetenek barı**; karakter seker (`karakter-sekme`, 600 ms, K01'in T+0 anında); ruh hali yeniden hesaplanır; günün ilerleme barı 400 ms'de dolar; sandık kartındaki kalan sayısı güncellenir. | Uçuş ve sekme yok; değerler 150 ms opaklık geçişiyle güncellenir. |
 | Yetenek seviyesi atlama | K02 (03 §9); bant, ilgili mini barın hemen üstünde 2,5 sn görünür. | Bant hareketsiz görünür. |
 | Karakter seviyesi atlama | K03 (03 §9); kapandıktan sonra karakterin üstündeki rozet yeni sayıyla 300 ms parlar; `ortak.sonraki_seviye` güncellenir. | Parlama yok. |
 | Günün son görevi | K05 (§5.2). | Sallanma ve poz animasyonu yok; ifade anında değişir; bildirim yine gösterilir. |
@@ -125,7 +125,7 @@ Ruh hali sayfa açılışında sunucudan gelen veriyle hesaplanır, görev tamam
 | Hazır | Tüm aktif görevler bugün tamam, sandık bugün açılmadı | `sandik-hazir`, 2 sn'de bir sallanma, altın kenarlık | `sandik.kart_hazir_baslik` + düğme `sandik.kart_hazir_dugme` | M01 |
 | Açıldı | Sandık bugün açıldı | `sandik-acildi` | `sandik.kart_acildi_baslik` + `sandik.kart_acildi_aciklama` | Etkisiz (kart düğme değildir) |
 
-Kurallar (**VARSAYIM S6**, S24):
+Kurallar (**VARSAYIM S6**, **VARSAYIM S24**):
 
 - Açılma koşulu: en az 1 aktif görev ve bugünkü **tüm** aktif görevler tamamlanmış. Gün içinde eklenen görev de koşula dahildir; hazır sandık, yeni görev eklenince yeniden kilitlenir.
 - Ödül: `20 + 5 × (bugün tamamlanan görev sayısı)` altın, en fazla 60 altın. Altın dışında içerik yok.
@@ -223,7 +223,7 @@ Bu ekran açılırken bilmesi gerekenler:
 | Bilgi | Bugünkü kodda | Not |
 |---|---|---|
 | Kahraman adı | Var (`Kullanicilar.Ad`) | |
-| Görünüm renkleri | Var (`AvatarVerisi`) | |
+| Görünüm seçenekleri (ten, saç, göz, üst giysi) | Kısmen (`AvatarVerisi` serbest renk tutuyor) | **YENİ VERİ**: seçenek kimlikleri (06 §5) |
 | Kuşanılmış eşyalar (tür, eşya, karakter katmanı) | Kısmen (ad ve tür var; katman çizimi koda gömülü) | **YENİ VERİ**: eşyanın karakter katmanı görseline erişim |
 | Altın | Var (`Bakiye`) | Tam sayı olarak |
 | Beş yeteneğin seviyesi ve o seviyedeki XP / gereken XP | Hesaplanıyor (`hesaplaLevelVerileri`) | |
