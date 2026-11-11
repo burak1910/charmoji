@@ -42,11 +42,11 @@ Art style for a mobile RPG game interface sprite: low-resolution pixel art drawn
 - Amaç / kullanım yeri: ana ekranın merkezindeki büyük karakter; eşyasız, varsayılan renkler. Büst kadrajı, kafa büyük.
 - Model: `gpt-image-2.5-sunburst`
 - Üretim parametreleri: `aspect_ratio: "1:1"`, `resolution: "1K"`, `quality: "high"`, 4 varyasyon
-- Durum: bekliyor
-- Üretim kimliği:
-- Seçilen varyasyon:
-- Tarih:
-- Not:
+- Durum: üretildi, kullanıcı onayı bekliyor
+- Üretim kimliği: Ybo8fNX1HJ6RMs3qzl63, 3Let5fhqfvXzg0GK7mpu, UeVZKgnZTeXs65Hi9EW3, mS0Pg3RkKLYW5KAFJH4J
+- Seçilen varyasyon: 1 (geçici seçim; yönetici seçti, kullanıcı onayı bekliyor)
+- Tarih: 2026-11-11
+- Not: 1024x1024 yeşil zeminli üretildi; `assets/araclar/arka-plan-sil.py --ortala` ile RGBA yapıldı (ara alfa pikseli yok).
 
 ```
 Game asset for a mobile RPG habit-tracker app: the default player character sprite, shown large in the center of the home screen, on a flat solid #00FF00 green background.
@@ -68,11 +68,11 @@ Art style for a mobile RPG game interface sprite: low-resolution pixel art drawn
 - Amaç / kullanım yeri: karakterin üstüne CSS ile bindirilecek şapka eşyası (tek başına nesne olarak). Market kartında da kullanılır.
 - Model: `gpt-image-2.5-sunburst`
 - Üretim parametreleri: `aspect_ratio: "1:1"`, `resolution: "1K"`, `quality: "high"`, 4 varyasyon
-- Durum: bekliyor
-- Üretim kimliği:
-- Seçilen varyasyon:
-- Tarih:
-- Not:
+- Durum: üretildi, kullanıcı onayı bekliyor
+- Üretim kimliği: l0iKUJZ4wswmKNIykBmm, CNJe4lRLL2DyN93VLSga, EAKAMNXkDJVzWazyjgSy, lTOBlvrySOZZJ3iVeXyZ
+- Seçilen varyasyon: 1 (geçici seçim; yönetici seçti, kullanıcı onayı bekliyor)
+- Tarih: 2026-11-11
+- Not: 1024x1024 yeşil zeminli üretildi; `assets/araclar/arka-plan-sil.py --ortala` ile RGBA yapıldı (ara alfa pikseli yok).
 
 ```
 Game asset for a mobile RPG habit-tracker app: a hat item sprite that will later be overlaid on a character head with CSS, drawn alone on a flat solid #00FF00 green background.
@@ -94,11 +94,11 @@ Art style for a mobile RPG game interface sprite: low-resolution pixel art drawn
 - Amaç / kullanım yeri: karakterin gözlerinin üstüne CSS ile bindirilecek yüz eşyası. Hizalama riskinin en yüksek olduğu tür.
 - Model: `gpt-image-2.5-sunburst`
 - Üretim parametreleri: `aspect_ratio: "1:1"`, `resolution: "1K"`, `quality: "high"`, 4 varyasyon
-- Durum: bekliyor
-- Üretim kimliği:
-- Seçilen varyasyon:
-- Tarih:
-- Not:
+- Durum: üretildi, kullanıcı onayı bekliyor
+- Üretim kimliği: emFrA6iBMrLToFr8FaXy, uKSa9Y96BxNSU3reXcZ8, 7Mgx4XXifcqsSM8HJVmd, KXEa9OTUoWHdhteN7HsJ
+- Seçilen varyasyon: 1 (geçici seçim; yönetici seçti, kullanıcı onayı bekliyor)
+- Tarih: 2026-11-11
+- Not: 1024x1024 yeşil zeminli üretildi; `assets/araclar/arka-plan-sil.py --ortala` ile RGBA yapıldı (ara alfa pikseli yok).
 
 ```
 Game asset for a mobile RPG habit-tracker app: a face accessory sprite that will later be overlaid on a character face with CSS, drawn alone on a flat solid #00FF00 green background.
@@ -120,11 +120,11 @@ Art style for a mobile RPG game interface sprite: low-resolution pixel art drawn
 - Amaç / kullanım yeri: günün tüm görevleri bitince açılan günlük sandığın kapalı hali (ana ekran, ödül ekranı).
 - Model: `gpt-image-2.5-sunburst`
 - Üretim parametreleri: `aspect_ratio: "1:1"`, `resolution: "1K"`, `quality: "high"`, 4 varyasyon
-- Durum: bekliyor
-- Üretim kimliği:
-- Seçilen varyasyon:
-- Tarih:
-- Not:
+- Durum: üretildi, kullanıcı onayı bekliyor
+- Üretim kimliği: u8CQHu4Z5o4sJT9BgU15, Xh6JoSCvJtEVyNsDobWM, QYQRz21x72JUFHOHdOpO, fzRya1GVkwAHz9l39Kt6
+- Seçilen varyasyon: 1 (geçici seçim; yönetici seçti, kullanıcı onayı bekliyor)
+- Tarih: 2026-11-11
+- Not: 1024x1024 yeşil zeminli üretildi; `assets/araclar/arka-plan-sil.py --ortala` ile RGBA yapıldı (ara alfa pikseli yok).
 
 ```
 Game asset for a mobile RPG habit-tracker app: the daily reward chest shown in its closed state, on a flat solid #00FF00 green background. It is displayed in the center of the screen when all tasks of the day are completed.
@@ -146,11 +146,11 @@ Art style for a mobile RPG game interface sprite: low-resolution pixel art drawn
 - Amaç / kullanım yeri: altın bakiyesi ve fiyat etiketlerinin yanındaki küçük ikon. Küçük boyutta okunmalı.
 - Model: `gpt-image-2.5-sunburst`
 - Üretim parametreleri: `aspect_ratio: "1:1"`, `resolution: "1K"`, `quality: "high"`, 4 varyasyon
-- Durum: bekliyor
-- Üretim kimliği:
-- Seçilen varyasyon:
-- Tarih:
-- Not:
+- Durum: üretildi, kullanıcı onayı bekliyor
+- Üretim kimliği: gk9dNMKZjZD5Cg2Vs0ha, zx4mkrAV15BMVTzDcXla, KXYOy8iGYYxny7AYMtox, SWa3b5Pc08tjTX6jclip
+- Seçilen varyasyon: 1 (geçici seçim; yönetici seçti, kullanıcı onayı bekliyor)
+- Tarih: 2026-11-11
+- Not: 1024x1024 yeşil zeminli üretildi; `assets/araclar/arka-plan-sil.py --ortala` ile RGBA yapıldı (ara alfa pikseli yok).
 
 ```
 Game asset for a mobile RPG habit-tracker app: a small gold coin icon shown next to the gold balance and price labels, so it must read clearly even when displayed at 24 pixels, on a flat solid #00FF00 green background.
