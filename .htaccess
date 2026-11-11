@@ -1,0 +1,15 @@
+# Apache: gizli yolları web'den kapatır (sunucu.php ile aynı kurallar).
+# Not: Bu dosyanın etkili olması için AllowOverride All gerekir (XAMPP'ta varsayılan olarak açıktır).
+
+# Nokta ile başlayan dosya/dizinler (.env, .git, .htaccess ...)
+RedirectMatch 404 "(^|/)\."
+
+# Yapılandırma, veritabanı, test ve belge dizinleri; araç klasörü
+RedirectMatch 404 "(^|/)(config|database|tests|docs)(/|$)"
+RedirectMatch 404 "(^|/)assets/araclar(/|$)"
+
+# Yönlendirici betik ve hassas uzantılar
+RedirectMatch 404 "(^|/)sunucu\.php$"
+RedirectMatch 404 "\.(sql|md|sh|log|env)$"
+
+Options -Indexes

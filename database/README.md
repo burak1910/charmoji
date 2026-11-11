@@ -52,6 +52,23 @@ mysql -uroot --default-character-set=utf8mb4 charmoji < database/seed.sql     # 
 (`Günlük Giriş`, `3 Alışkanlık Tamamla`) ve `avatar_renderer.php`'nin adıyla çizdiği
 5 market eşyası eklenir.
 
+## Uygulamayı çalıştırma
+
+Geliştirmede PHP yerleşik sunucusu **yönlendirici betikle** başlatılır (depo kökünden):
+
+```bash
+php -S 127.0.0.1:8000 -t . sunucu.php
+```
+
+`sunucu.php` olmadan (`-t .` tek başına) `.env` (DB şifresi dahil), `.git/`, `database/`,
+`tests/` ve `config/` web'den düz metin okunabilir. Yönlendirici bunlara 404 döner.
+XAMPP/Apache'de kökteki `.htaccess` aynı yolları kapatır (`AllowOverride All` gerekir).
+
+**Canlı ortam uyarısı:** Web kökü yalnızca sunulması gereken dosyaları içermelidir.
+Canlıda `.env`, `config/`, `database/`, `tests/`, `docs/` web kökünün DIŞINDA tutulmalı
+(ya da sunucu bu yolları reddedecek biçimde yapılandırılmalı); `.htaccess`/`sunucu.php`
+yalnızca ek savunmadır.
+
 ## Mevcut kuruluma migration uygulama
 
 Sıra: **001 → 002 → 003**. Üçü de tekrar çalıştırılabilir; uygulananlar `SemaGecmisi`

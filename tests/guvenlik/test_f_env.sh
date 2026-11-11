@@ -18,7 +18,7 @@ rm -f "$KOPYA/.env"
 
 F_PORT=$((PORT_TABAN + 2))
 env -u CHARMOJI_ENV_FILE -u DB_HOST -u DB_NAME -u DB_USER -u DB_PASSWORD -u DB_PORT -u APP_LOG_FILE \
-    php -d session.save_path="$GECICI/oturumlar" -S "127.0.0.1:$F_PORT" -t "$KOPYA" > "$GECICI/sunucu_env.log" 2>&1 &
+    php -d session.save_path="$GECICI/oturumlar" -S "127.0.0.1:$F_PORT" -t "$KOPYA" $( [[ -f "$KOPYA/sunucu.php" ]] && printf '%s' "$KOPYA/sunucu.php" ) > "$GECICI/sunucu_env.log" 2>&1 &
 SUNUCU_PIDLERI+=($!)
 for _ in $(seq 1 50); do curl -s -o /dev/null "http://127.0.0.1:$F_PORT/" && break; sleep 0.1; done
 FB="http://127.0.0.1:$F_PORT/"
