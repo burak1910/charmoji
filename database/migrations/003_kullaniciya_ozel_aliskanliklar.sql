@@ -69,6 +69,13 @@ SELECT 'K02', 'Aliskanliklar.Puan NULL', COUNT(*), GROUP_CONCAT(DISTINCT a.Alisk
   JOIN Aliskanliklar a ON a.AliskanlikID = ka.AliskanlikID
  WHERE a.Puan IS NULL;
 
+INSERT INTO cm003_sorunlar
+SELECT 'K04', 'Aliskanliklar.Ad 100 karakterden uzun (KullaniciAliskanliklari.Ad VARCHAR(100))', COUNT(*),
+       GROUP_CONCAT(DISTINCT a.AliskanlikID ORDER BY a.AliskanlikID)
+  FROM KullaniciAliskanliklari ka
+  JOIN Aliskanliklar a ON a.AliskanlikID = ka.AliskanlikID
+ WHERE CHAR_LENGTH(a.Ad) > 100;
+
 -- K03: aynı kullanıcıda, HEDEF sütunun kuralına göre aynı sayılan adlar.
 -- Hedef kural: KullaniciAliskanliklari.Ad varsa onunki, yoksa tablonun
 -- varsayılanı (ADD COLUMN bu kuralı alır).
@@ -78,13 +85,20 @@ SET @cm003_kural = COALESCE(
   (SELECT TABLE_COLLATION FROM information_schema.TABLES
     WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'kullanicialiskanliklari'));
 SET @cm003_karakter = (SELECT CHARACTER_SET_NAME FROM information_schema.COLLATIONS WHERE COLLATION_NAME = @cm003_kural);
+-- Ad sütunu önceki (yarım kalmış) bir çalıştırmadan varsa onun değeri, yoksa
+-- Aliskanliklar.Ad esas alınır; AliskanlikID'si boş satırlar da dahildir.
+SET @cm003_ad = IF(EXISTS (SELECT 1 FROM information_schema.COLUMNS
+                            WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'kullanicialiskanliklari'
+                              AND COLUMN_NAME = 'Ad'),
+                   'COALESCE(ka.Ad, a.Ad)', 'a.Ad');
 SET @cm003_sql = CONCAT(
   'INSERT INTO cm003_sorunlar ',
   'SELECT ''K03'', CONCAT(''Ayni kullanicida ayni sayilan adlar (kural: ', @cm003_kural, '); UNIQUE(KullaniciID, Ad) eklenemez''), ',
   '       COUNT(*), GROUP_CONCAT(o SEPARATOR '' | '') ',
-  '  FROM (SELECT CONCAT(''Kullanici='', ka.KullaniciID, '' Adlar: '', GROUP_CONCAT(CONCAT('''''''', a.Ad, '''''''') SEPARATOR '', '')) o ',
-  '          FROM KullaniciAliskanliklari ka JOIN Aliskanliklar a ON a.AliskanlikID = ka.AliskanlikID ',
-  '         GROUP BY ka.KullaniciID, (CONVERT(a.Ad USING ', @cm003_karakter, ') COLLATE ', @cm003_kural, ') ',
+  '  FROM (SELECT CONCAT(''Kullanici='', ka.KullaniciID, '' Adlar: '', GROUP_CONCAT(CONCAT('''''''', ', @cm003_ad, ', '''''''') SEPARATOR '', '')) o ',
+  '          FROM KullaniciAliskanliklari ka LEFT JOIN Aliskanliklar a ON a.AliskanlikID = ka.AliskanlikID ',
+  '         WHERE ', @cm003_ad, ' IS NOT NULL ',
+  '         GROUP BY ka.KullaniciID, (CONVERT(', @cm003_ad, ' USING ', @cm003_karakter, ') COLLATE ', @cm003_kural, ') ',
   '        HAVING COUNT(*) > 1) d');
 PREPARE cm003_st FROM @cm003_sql;
 EXECUTE cm003_st;
@@ -97,7 +111,7 @@ CREATE TEMPORARY TABLE cm003_kapi (
   CONSTRAINT `003_DURDU_veri_sorunu_var_hicbir_sey_degistirilmedi` CHECK (Durum = 'temiz')
 );
 INSERT INTO cm003_kapi
-SELECT IF(COUNT(*) = 4 AND SUM(Adet) = 0, 'temiz', 'sorunlu') FROM cm003_sorunlar;
+SELECT IF(COUNT(*) = 5 AND SUM(Adet) = 0, 'temiz', 'sorunlu') FROM cm003_sorunlar;
 
 -- ---------------------------------------------------------------------
 -- 1-3. UYGULAMA
@@ -113,7 +127,7 @@ BEGIN
   -- KAPI (istemci hatada devam etse bile)
   SELECT COUNT(*), COALESCE(SUM(Adet), 1) INTO v_denetim, v_sorun FROM cm003_sorunlar;
   IF (SELECT COUNT(*) FROM SemaGecmisi WHERE Surum = '004') > 0
-     OR v_denetim <> 4 OR v_sorun <> 0 THEN
+     OR v_denetim <> 5 OR v_sorun <> 0 THEN
     SIGNAL SQLSTATE '45000'
       SET MESSAGE_TEXT = '003 DURDU: denetimler gecmedi; hicbir sey degistirilmedi.';
   END IF;
@@ -134,7 +148,8 @@ BEGIN
          ka.Puan     = COALESCE(ka.Puan, a.Puan)
    WHERE ka.Ad IS NULL OR ka.StatTuru IS NULL OR ka.Puan IS NULL;
 
-  -- Tetikleyici hemen ardından (yordam dışında) yeniden kurulur.
+  -- Tetikleyici hemen ardından (yordam dışında) yeniden kurulur; CREATE
+  -- TRIGGER saklı yordam içinde kullanılamaz.
   DROP TRIGGER IF EXISTS TRG_KA_EskiKodUyumu;
   SET @cm003_hazir = 'evet';
 END$$
@@ -210,16 +225,17 @@ DELIMITER ;
 
 CALL cm003_hazirla();
 
--- Kapı geçilmediyse cm003_hazirla tetikleyiciyi düşürmemiştir; o durumda
--- aşağıdaki CREATE ya "zaten var" ya da (sütunlar yoksa) "Unknown column"
--- hatası verir ve hiçbir şey değişmez.
+-- Kapı geçilmediyse cm003_hazirla tetikleyiciyi düşürmemiştir ve (ilk
+-- çalıştırmada) Ad/StatTuru/Puan sütunları yoktur: bu CREATE "Unknown column"
+-- ya da "zaten var" hatası verir ve hiçbir şey değişmez. Kapı geçildiyse
+-- tetikleyici, NOT NULL / UNIQUE adımından ÖNCE kurulmuş olur.
 DELIMITER $$
 CREATE TRIGGER TRG_KA_EskiKodUyumu
 BEFORE INSERT ON KullaniciAliskanliklari
 FOR EACH ROW
 BEGIN
-  -- Eski kod yalnızca AliskanlikID verir; Ad/StatTuru/Puan'ı ortak
-  -- tablodan doldur. Yeni kod Ad verir ve AliskanlikID'yi boş bırakır.
+  -- Eski kod yalnizca AliskanlikID verir; Ad/StatTuru/Puan ortak tablodan doldurulur.
+  -- Yeni kod Ad verir ve AliskanlikID bos birakir.
   IF NEW.AliskanlikID IS NOT NULL AND (NEW.Ad IS NULL OR NEW.Ad = '') THEN
     SET NEW.Ad       = (SELECT a.Ad       FROM Aliskanliklar a WHERE a.AliskanlikID = NEW.AliskanlikID);
     SET NEW.StatTuru = (SELECT a.StatTuru FROM Aliskanliklar a WHERE a.AliskanlikID = NEW.AliskanlikID);

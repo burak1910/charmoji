@@ -196,8 +196,8 @@ CREATE TRIGGER TRG_KA_EskiKodUyumu
 BEFORE INSERT ON KullaniciAliskanliklari
 FOR EACH ROW
 BEGIN
-  -- Eski kod yalnızca AliskanlikID verir; Ad/StatTuru/Puan'ı ortak
-  -- tablodan doldur. Yeni kod Ad verir ve AliskanlikID'yi boş bırakır.
+  -- Eski kod yalnizca AliskanlikID verir; Ad/StatTuru/Puan ortak tablodan doldurulur.
+  -- Yeni kod Ad verir ve AliskanlikID bos birakir.
   IF NEW.AliskanlikID IS NOT NULL AND (NEW.Ad IS NULL OR NEW.Ad = '') THEN
     SET NEW.Ad       = (SELECT a.Ad       FROM Aliskanliklar a WHERE a.AliskanlikID = NEW.AliskanlikID);
     SET NEW.StatTuru = (SELECT a.StatTuru FROM Aliskanliklar a WHERE a.AliskanlikID = NEW.AliskanlikID);

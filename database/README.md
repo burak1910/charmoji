@@ -135,6 +135,18 @@ mysql -uroot --default-character-set=utf8mb4 charmoji < database/migrations/002_
 mysql -uroot --default-character-set=utf8mb4 charmoji < database/migrations/003_kullaniciya_ozel_aliskanliklar.sql
 ```
 
+### Migration'lar iki biçimde çalıştırılır
+
+* **Batch (önerilen):** `mysql ... charmoji < dosya.sql` (yukarıdaki komutlar). İstemci ilk
+  hatada durur.
+* **`SOURCE`:** etkileşimli kabukta `mysql> SOURCE database/migrations/002_kisitlar.sql;`
+  ya da `mysql -e "SOURCE ..."`. Onay değişkeni gereken araçlarda `SET @onay='...';` aynı
+  oturumda önce verilir. `SOURCE` (ve `mysql --force`) hatadan sonra devam eder; bu yüzden
+  kapılar değişiklikleri yapan yordamın içindedir (aşağıya bakın) ve hata görürseniz
+  çıktının ilk `ERROR` satırına bakın: "DURDU" içeren mesaj hiçbir şeyin değişmediği
+  anlamına gelir; sonraki `ERROR` satırları (ör. "PROCEDURE ... does not exist")
+  bunun yan etkisidir.
+
 ### Güvenlik kapıları nasıl çalışır?
 
 002, 003, `tekrar_temizle.sql` ve 004 aynı kalıbı kullanır:
@@ -184,7 +196,13 @@ adet, örnek ID'ler). Bu durumda:
   atomik bir `ALTER TABLE` olduğundan hiçbiri uygulanmamıştır. Uygulama (eski ve yeni kod)
   çalışır durumdadır. Çakışan satırı düzeltip 003'ü yeniden çalıştırın.
 * Bir saklı yordamın içinde durulduysa `cm003_*` (002'de `cm002_*`) yordamları veritabanında
-  kalabilir; zararsızdırlar ve dosya bir sonraki çalıştırmada silinir.
+  kalabilir; zararsızdırlar ve dosya bir sonraki çalıştırmada silinir. Hemen temizlemek için:
+  ```sql
+  DROP PROCEDURE IF EXISTS cm003_hazirla;  DROP PROCEDURE IF EXISTS cm003_sikilastir;
+  -- 002: cm002_uygula, cm002_fk, cm002_check, cm002_indeks, cm002_sql
+  ```
+  `SHOW PROCEDURE STATUS WHERE Db = 'charmoji';` kalanları listeler.
+* `Aliskanliklar.Ad` 100 karakterden uzunsa ("Ad 100 karakterden uzun") 003 durur; adı kısaltın.
 * `003_DURDU_004_zaten_uygulanmis...`: 004 sonrası 003 bir daha çalıştırılmaz.
 
 ## Migration ve araç listesi
@@ -276,7 +294,7 @@ düz `INSERT`'leri hataya düşürür; veri bozulmaz ama kullanıcı hata göreb
 |---|---|---|
 | `view/userpage.php:35` | Günlük görevler düz `INSERT` ile ekleniyor; iki eşzamanlı sayfa açılışında ikincisi UQ_KGG hatasıyla yakalanmamış istisna verir | `INSERT IGNORE` |
 | `view/ajax_islem.php:150` | Eşzamanlı aynı eşya alımında UQ_Env hatası `catch` ile yakalanır ama kullanıcı genel "sunucu hatası" mesajı görür | 1062 hatasını "Zaten sahipsin." olarak çevir |
-| `view/ajax_islem.php:132-149` | Bakiye okunup PHP'de hesaplanıp yazılıyor (`SET Bakiye = ?`): eşzamanlı iki farklı alımda biri kaybolur (lost update) | `SELECT ... FOR UPDATE` ya da `UPDATE Kullanicilar SET Bakiye = Bakiye - ? WHERE KullaniciID = ? AND Bakiye >= ?` + `affected_rows` kontrolü |
+| `view/ajax_islem.php:133-149` | Bakiye okunup PHP'de hesaplanıp yazılıyor (`SET Bakiye = ?`): eşzamanlı iki farklı alımda biri kaybolur (lost update) | `SELECT ... FOR UPDATE` ya da `UPDATE Kullanicilar SET Bakiye = Bakiye - ? WHERE KullaniciID = ? AND Bakiye >= ?` + `affected_rows` kontrolü |
 | `view/ajax_islem.php:172-182` | Ödül önce okunup sonra veriliyor; eşzamanlı iki istekte ödül iki kez alınabilir | Önce `UPDATE KullaniciGunlukGorevleri SET OdulAlindiMi = 1 WHERE KullaniciGorevID = ? AND KullaniciID = ? AND TamamlandiMi = 1 AND OdulAlindiMi = 0`, `affected_rows = 1` ise bakiyeyi artır |
 | `service/FriendManager.php:44,98,113` | Topluluk/istek/arkadaş sorguları `AvatarVerisi` seçmiyor; `view/userpage.php:273,286,298` bu alanı bekliyor (hep varsayılan avatar çizilir) | Sorgulara `k.AvatarVerisi` / `K.AvatarVerisi` ekle |
 
