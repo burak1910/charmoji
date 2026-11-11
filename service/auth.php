@@ -4,32 +4,31 @@
 // Çıktı tamponlamayı başlat (Header hatalarını engeller)
 ob_start();
 
+// Hata gösterimi kapalı/loglama açık ve .env yapılandırması; her şeyden önce yüklenir.
+require_once __DIR__ . '/../config/uygulama.php';
+
 // Session başlatma kontrolü (Hata vermemesi için)
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(0, '/'); 
     session_start();
 }
 
-// Hata Raporlama
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 // ----------------------------------------------------------------
-// 1. Veritabanı Bağlantısı
+// 1. Veritabanı Bağlantısı (bilgiler .env / ortam değişkenlerinden)
 // ----------------------------------------------------------------
-$servername = "localhost";
-$db_username = "root"; 
-$db_password = ""; 
-$dbname = "charmoji"; 
-
 function get_db_connection() {
-    global $servername, $db_username, $db_password, $dbname;
-    $conn = new mysqli($servername, $db_username, $db_password, $dbname);
+    // Hatalar istisna olarak fırlatılır; ayrıntı log'a yazılır, kullanıcıya
+    // genel mesaj gösterilir (bkz. config/uygulama.php).
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-    if ($conn->connect_error) {
-        die("KRİTİK HATA: Veritabanına bağlanılamadı! " . $conn->connect_error);
-    }
+    $port = (int) charmoji_ayar('DB_PORT', '3306');
+    $conn = new mysqli(
+        charmoji_ayar('DB_HOST'),
+        charmoji_ayar('DB_USER'),
+        charmoji_ayar('DB_PASSWORD', ''),
+        charmoji_ayar('DB_NAME'),
+        $port > 0 ? $port : 3306
+    );
     $conn->set_charset("utf8mb4");
     return $conn;
 }
