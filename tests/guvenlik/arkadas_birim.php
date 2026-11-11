@@ -1,11 +1,13 @@
 <?php
 // tests/guvenlik/arkadas_birim.php
-// Kullanım: CHARMOJI_ENV_FILE=<test.env> php arkadas_birim.php UYGULAMA_KOKU A_ID B_ID C_ID
+// Kullanım: CHARMOJI_ENV_FILE=<test.env> php arkadas_birim.php UYGULAMA_KOKU A_ID B_ID C_ID D_ID
 // FriendManager metotlarının dönüş değerlerini ve sahiplik kurallarını doğrudan sınar.
+// Çift başına tek kayıt kısıtı (UQ_Ark_Cift) nedeniyle: A-C çifti kabul/silme sınamalarında,
+// A-D çifti bekleyen istek sınamalarında kullanılır (B her ikisinde de üçüncü kişidir).
 // Her satır "[GEÇTİ] ..." ya da "[KALDI] ..." biçimindedir.
 
-[$betik, $kok, $a, $b, $c] = $argv + [null, null, 0, 0, 0];
-$a = (int) $a; $b = (int) $b; $c = (int) $c;
+[$betik, $kok, $a, $b, $c, $d] = $argv + [null, null, 0, 0, 0, 0];
+$a = (int) $a; $b = (int) $b; $c = (int) $c; $d = (int) $d;
 
 require_once $kok . '/service/FriendManager.php';
 
@@ -39,18 +41,18 @@ sonuc(FriendManager::acceptRequest(999999, $c) === false,
 // rejectRequest
 sonuc(FriendManager::rejectRequest($id, $c) === false && durum($conn, $id) === 1,
     'rejectRequest: kabul edilmiş arkadaşlığı silmez (yalnızca bekleyen istek)');
-$id2 = ekle($conn, $a, $c, 0);
+$id2 = ekle($conn, $a, $d, 0);
 sonuc(FriendManager::rejectRequest($id2, $b) === false && durum($conn, $id2) === 0,
     'rejectRequest: alıcı olmayan (B) reddedemez');
 sonuc(FriendManager::rejectRequest($id2, $a) === false && durum($conn, $id2) === 0,
     'rejectRequest: gönderen (A) "reddet" ile silemez');
-sonuc(FriendManager::rejectRequest($id2, $c) === true && durum($conn, $id2) === null,
-    'rejectRequest: alıcı (C) bekleyen isteği reddeder');
+sonuc(FriendManager::rejectRequest($id2, $d) === true && durum($conn, $id2) === null,
+    'rejectRequest: alıcı (D) bekleyen isteği reddeder');
 
 // removeFriend
 sonuc(FriendManager::removeFriend($id, $b) === false && durum($conn, $id) === 1,
     'removeFriend: taraf olmayan (B) silemez');
-$id3 = ekle($conn, $a, $c, 0);
+$id3 = ekle($conn, $a, $d, 0);
 sonuc(FriendManager::removeFriend($id3, $a) === false && durum($conn, $id3) === 0,
     'removeFriend: bekleyen isteği silmez (yalnızca kabul edilmiş arkadaşlık)');
 sonuc(FriendManager::removeFriend($id, $c) === true && durum($conn, $id) === null,

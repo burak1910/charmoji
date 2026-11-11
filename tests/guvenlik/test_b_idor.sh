@@ -4,13 +4,15 @@
 bolum "b) Arkadaşlık kayıtlarında IDOR"
 
 declare -A KAV JET UID_
-for k in A B C; do
+for k in A B C D; do
     KAV[$k]=$(yeni_kavanoz "b_$k")
     kayit_ol "${KAV[$k]}" "idor_$k" "idor_$k@test.local" "Sifre123!"
     UID_[$k]=$(kullanici_id "idor_$k@test.local")
     JET[$k]=$(sayfa_jetonu "${KAV[$k]}")
 done
-kanit "A=${UID_[A]} B=${UID_[B]} C=${UID_[C]}"
+kanit "A=${UID_[A]} B=${UID_[B]} C=${UID_[C]} D=${UID_[D]}"
+# Not: resmi şemada çift başına tek kayıt vardır (UQ_Ark_Cift). Bekleyen istek A-C çiftindedir;
+# kabul edilmiş arkadaşlık için ayrı bir çift (A-D) kullanılır. B her ikisinde de üçüncü kişidir.
 
 # arkadas_islemi KISI alan=deger
 arkadas_islemi() {
@@ -42,16 +44,16 @@ arkadas_islemi B "accept_request_id=$BEKLEYEN"
 D=$(kayit_durumu "$BEKLEYEN"); kanit "B accept sonrası kayıt durumu: $D"
 dogrula "B, A->C isteğini kabul edemedi (Durum hâlâ 0)" esit "$D" "0"
 
-# Saldırı 3: B, A ile C arasındaki KABUL EDİLMİŞ arkadaşlığı silmeye çalışır
-ARKADAS=$(istek_ekle "${UID_[A]}" "${UID_[C]}" 1)
+# Saldırı 3: B, A ile D arasındaki KABUL EDİLMİŞ arkadaşlığı silmeye çalışır
+ARKADAS=$(istek_ekle "${UID_[A]}" "${UID_[D]}" 1)
 arkadas_islemi B "reject_request_id=$ARKADAS"
 D=$(kayit_durumu "$ARKADAS"); kanit "B reject_request_id (arkadaşlık) sonrası: $D"
-dogrula "B, A-C arkadaşlığını reject_request_id ile silemedi" esit "$D" "1"
-[[ "$D" == "SILINDI" ]] && ARKADAS=$(istek_ekle "${UID_[A]}" "${UID_[C]}" 1)
+dogrula "B, A-D arkadaşlığını reject_request_id ile silemedi" esit "$D" "1"
+[[ "$D" == "SILINDI" ]] && ARKADAS=$(istek_ekle "${UID_[A]}" "${UID_[D]}" 1)
 arkadas_islemi B "remove_friend_id=$ARKADAS"
 D=$(kayit_durumu "$ARKADAS"); kanit "B remove_friend_id sonrası: $D"
-dogrula "B, A-C arkadaşlığını remove_friend_id ile silemedi" esit "$D" "1"
-[[ "$D" == "SILINDI" ]] && ARKADAS=$(istek_ekle "${UID_[A]}" "${UID_[C]}" 1)
+dogrula "B, A-D arkadaşlığını remove_friend_id ile silemedi" esit "$D" "1"
+[[ "$D" == "SILINDI" ]] && ARKADAS=$(istek_ekle "${UID_[A]}" "${UID_[D]}" 1)
 
 # Saldırı 4: İsteği GÖNDEREN (A) kendi gönderdiği isteği "kabul" edemez
 arkadas_islemi A "accept_request_id=$BEKLEYEN"
@@ -77,7 +79,7 @@ dogrula "meşru arkadaş silme (taraf A) çalışıyor" esit "$D" "SILINDI"
 
 # FriendManager dönüş değerleri (birim; CLI)
 if grep -q "function rejectRequest" "$UYGULAMA/service/FriendManager.php" 2>/dev/null; then
-    BIRIM=$(CHARMOJI_ENV_FILE="$TEST_ENV" php "$TEST_DIZINI/arkadas_birim.php" "$UYGULAMA" "${UID_[A]}" "${UID_[B]}" "${UID_[C]}" 2>&1)
+    BIRIM=$(CHARMOJI_ENV_FILE="$TEST_ENV" php "$TEST_DIZINI/arkadas_birim.php" "$UYGULAMA" "${UID_[A]}" "${UID_[B]}" "${UID_[C]}" "${UID_[D]}" 2>&1)
     while IFS= read -r satir; do
         case "$satir" in
             "[GEÇTİ] "*) dogrula "FriendManager: ${satir#\[GEÇTİ\] }" true ;;

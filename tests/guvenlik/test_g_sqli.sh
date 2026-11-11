@@ -23,9 +23,18 @@ istek "$GA" "${BASE}view/userpage.php" -d "add_habit_btn=1" -d "habit_name=gecer
 dogrula "geçerli habit_stat (Disiplin) kabul edildi" esit "$(sql "SELECT StatTuru FROM Aliskanliklar WHERE Ad='gecerli_aliskanlik'")" "Disiplin"
 
 # 2. Veritabanına elle yazılmış kötü StatTuru ile işaretleme
+# Resmi şemada CHK_KA_StatTuru / CHK_KS_StatTuru geçersiz StatTuru'nu reddeder; bunu doğrularız.
+HATA=$(sql "INSERT INTO KullaniciAliskanliklari (KullaniciID, Ad, StatTuru, BaslangicTarihi) VALUES ($GA_ID, 'kotu_kisit', 'x'' OR ''1''=''1', CURDATE())" 2>&1)
+dogrula "şema: KullaniciAliskanliklari.StatTuru kötü değeri reddediyor (CHK_KA_StatTuru)" icerir "$HATA" "CHK_KA_StatTuru"
+HATA=$(sql "INSERT INTO KullaniciStatlari (KullaniciID, StatTuru) VALUES ($GA_ID, 'x'' OR ''1''=''1')" 2>&1)
+dogrula "şema: KullaniciStatlari.StatTuru kötü değeri reddediyor (CHK_KS_StatTuru)" icerir "$HATA" "CHK_KS_StatTuru"
+# Kod tarafındaki savunmayı yine de sınamak için kısıtsız yol: uygulama StatTuru'nu eski ortak
+# Aliskanliklar tablosundan okur (kısıtı yok; 004 ile kalkacak). Kullanıcı satırı geçerli Ad/StatTuru
+# verir (tetikleyici devreye girmez), kötü değer yalnızca Aliskanliklar.StatTuru'nda durur.
 sql "INSERT INTO Aliskanliklar (Ad, StatTuru, Puan) VALUES ('kotu_stat_elle', 'x'' OR ''1''=''1', 10)"
 KOTU_A=$(sql "SELECT AliskanlikID FROM Aliskanliklar WHERE Ad='kotu_stat_elle'")
-KA=$(sql "INSERT INTO KullaniciAliskanliklari (KullaniciID, AliskanlikID, BaslangicTarihi) VALUES ($GA_ID, $KOTU_A, CURDATE()); SELECT LAST_INSERT_ID();")
+KA=$(sql "INSERT INTO KullaniciAliskanliklari (KullaniciID, AliskanlikID, Ad, StatTuru, BaslangicTarihi) VALUES ($GA_ID, $KOTU_A, 'kotu_stat_elle', 'Zeka', CURDATE()); SELECT LAST_INSERT_ID();")
+dogrula "fikstür: kötü StatTuru'lu alışkanlık kısıtsız yoldan eklendi (sınama boş geçmiyor)" dolu "$KA"
 B_ONCE=$(sql "SELECT GROUP_CONCAT(CONCAT(StatTuru,'=',ToplamPuan) ORDER BY StatTuru) FROM KullaniciStatlari WHERE KullaniciID=$GB_ID")
 A_ONCE=$(sql "SELECT GROUP_CONCAT(CONCAT(StatTuru,'=',ToplamPuan) ORDER BY StatTuru) FROM KullaniciStatlari WHERE KullaniciID=$GA_ID")
 ajax "$GA" "$GA_J" -d "ka_id=$KA" -d "durum=1"
