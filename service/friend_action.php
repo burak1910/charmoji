@@ -1,6 +1,6 @@
 <?php
 // service/friend_action.php
-session_start();
+// auth.php (FriendManager üzerinden) oturumu güvenli ayarlarla başlatır.
 require_once __DIR__ . '/FriendManager.php';
 
 // Güvenlik: Giriş yapmamışsa at

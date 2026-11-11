@@ -1,7 +1,7 @@
 <?php
 // view/market.php
-session_start();
-require_once __DIR__ . '/../service/auth.php'; 
+// Oturum, auth.php içinde güvenli çerez ayarlarıyla başlatılır.
+require_once __DIR__ . '/../service/auth.php';
 
 if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
 

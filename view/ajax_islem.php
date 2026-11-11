@@ -1,12 +1,12 @@
 <?php
 // view/ajax_islem.php - CHARMOJI FULL BACKEND
-session_start();
 header('Content-Type: application/json');
 
-// Hataları gizle, JSON bozulmasın
-ini_set('display_errors', 0);
+// Hata yanıtları da JSON olsun (bkz. config/uygulama.php).
+define('CHARMOJI_JSON_YANIT', true);
 
-require_once __DIR__ . '/../service/auth.php'; 
+// Oturum ve hata ayarları (display_errors kapalı) auth.php içinde yapılır.
+require_once __DIR__ . '/../service/auth.php';
 
 // 1. GÜVENLİK KONTROLÜ
 if (!isset($_SESSION['user_id'])) {

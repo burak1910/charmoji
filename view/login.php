@@ -2,9 +2,8 @@
 // ----------------------------------------------------------------
 // 1. OTURUM VE AYARLAR
 // ----------------------------------------------------------------
-ob_start();
-session_set_cookie_params(0, '/'); 
-session_start();
+// auth.php: çıktı tamponu, yapılandırma ve güvenli oturum başlatma.
+require_once __DIR__ . '/../service/auth.php';
 
 // Zaten giriş yapılmışsa yönlendir
 if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {

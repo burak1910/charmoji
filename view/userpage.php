@@ -1,8 +1,7 @@
 <?php
 // view/userpage.php
-session_start();
-
-require_once __DIR__ . '/../service/auth.php'; 
+// Oturum, auth.php içinde güvenli çerez ayarlarıyla başlatılır.
+require_once __DIR__ . '/../service/auth.php';
 require_once __DIR__ . '/../service/FriendManager.php';
 require_once __DIR__ . '/avatar_renderer.php'; // YENİ: Avatar çiziciyi dahil et
 

@@ -1,9 +1,7 @@
 <?php
 // view/avatar.php
-session_start();
-// Hataları gizle (JSON bozulmasın diye)
-ini_set('display_errors', 0); 
-require_once __DIR__ . '/../service/auth.php'; 
+// Oturum ve hata ayarları (display_errors kapalı) auth.php içinde yapılır.
+require_once __DIR__ . '/../service/auth.php';
 
 if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
 

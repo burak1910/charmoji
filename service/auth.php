@@ -7,11 +7,9 @@ ob_start();
 // Hata gösterimi kapalı/loglama açık ve .env yapılandırması; her şeyden önce yüklenir.
 require_once __DIR__ . '/../config/uygulama.php';
 
-// Session başlatma kontrolü (Hata vermemesi için)
-if (session_status() === PHP_SESSION_NONE) {
-    session_set_cookie_params(0, '/'); 
-    session_start();
-}
+// Oturumu güvenli çerez ayarlarıyla başlat (HttpOnly, SameSite, strict mode).
+require_once __DIR__ . '/guvenlik.php';
+guvenli_oturum_baslat();
 
 // ----------------------------------------------------------------
 // 1. Veritabanı Bağlantısı (bilgiler .env / ortam değişkenlerinden)
@@ -139,6 +137,8 @@ function handle_login() {
     $user = AuthManager::login($email_or_username, $password);
 
     if ($user) {
+        // Oturum sabitlemeye karşı: girişte yeni oturum kimliği.
+        oturum_kimligini_yenile();
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
         $_SESSION['fullname'] = $user['fullname'];
@@ -171,6 +171,7 @@ function handle_register() {
         // Otomatik giriş yap
         $user = AuthManager::login($data['email'], $data['password']);
         if ($user) {
+            oturum_kimligini_yenile();
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['fullname'] = $user['fullname'];
