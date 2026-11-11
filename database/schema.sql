@@ -2,7 +2,7 @@
 -- schema.sql  —  Charmoji şeması, SIFIRDAN KURULUM için tek dosya
 -- ---------------------------------------------------------------------
 -- İçerik: migrations/001 + 002 + 003 uygulandıktan sonraki şemanın
--- birebir aynısı (mysqldump --no-data ile karşılaştırılarak doğrulandı;
+-- birebir aynısı (mysqldump --no-data --routines --triggers ile karşılaştırılarak doğrulandı;
 -- bkz. database/README.md).
 --
 -- Bilerek İÇERİLEN geçiş parçaları (araclar/004 ile kaldırılacak):
@@ -12,7 +12,7 @@
 --   kodun sıfırdan kurulumda da çalışması için tutuluyor. PHP güncellenip
 --   004 uygulandıktan sonra bu dosya da 004 sonrası hâle getirilmeli.
 --
--- StatTuru kısıtı: CHECK + utf8mb4_bin (ENUM değil). Gerekçe:
+-- StatTuru kısıtı: CHECK + utf8mb4_0900_bin (ENUM değil). Gerekçe:
 --   * Sütun VARCHAR kalır; PHP tarafı düz metin karşılaştırmaya devam eder
 --     ('Guc' == ...), sorgularda değişiklik gerekmez.
 --   * utf8mb4_unicode_ci büyük/küçük harf ve aksan duyarsızdır: 'güç',
@@ -25,7 +25,9 @@
 --     satır eklenmez).
 --   * Yeni stat eklemek ENUM'da tabloyu yeniden yazan ALTER olabilir;
 --     CHECK'te kısıtı düşürüp yeniden eklemek yeterli.
---   * MySQL 8.0.16+ gerekir (CHECK'ler daha önce yok sayılırdı).
+--   * utf8mb4_0900_bin seçildi (utf8mb4_bin değil): NO PAD olduğu için
+--     sondaki boşluk da fark sayılır; 'Guc ' reddedilir.
+--   * MySQL 8.0.17+ gerekir (CHECK 8.0.16, utf8mb4_0900_bin 8.0.17).
 --
 -- Kullanım:
 --   mysql -uroot -e "CREATE DATABASE charmoji CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
@@ -67,7 +69,7 @@ CREATE TABLE KullaniciStatlari (
   CONSTRAINT FK_Stat_Kullanici FOREIGN KEY (KullaniciID)
     REFERENCES Kullanicilar (KullaniciID) ON DELETE CASCADE,
   CONSTRAINT CHK_KS_StatTuru
-    CHECK ((StatTuru COLLATE utf8mb4_bin) IN ('Zeka','Guc','Sosyallik','Disiplin','Yaraticilik'))
+    CHECK ((StatTuru COLLATE utf8mb4_0900_bin) IN ('Zeka','Guc','Sosyallik','Disiplin','Yaraticilik'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ESKİ ortak alışkanlık tablosu (geçiş için; araclar/004 ile kalkar) ----
@@ -101,7 +103,7 @@ CREATE TABLE KullaniciAliskanliklari (
   CONSTRAINT FK_KA_Kullanici FOREIGN KEY (KullaniciID)
     REFERENCES Kullanicilar (KullaniciID) ON DELETE CASCADE,
   CONSTRAINT CHK_KA_StatTuru
-    CHECK ((StatTuru COLLATE utf8mb4_bin) IN ('Zeka','Guc','Sosyallik','Disiplin','Yaraticilik'))
+    CHECK ((StatTuru COLLATE utf8mb4_0900_bin) IN ('Zeka','Guc','Sosyallik','Disiplin','Yaraticilik'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Günlük işaretleme kayıtları: alışkanlık başına günde tek satır -------
