@@ -319,10 +319,10 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
                         <div class="bg-gray-700/30 p-3 rounded-lg border border-gray-700 flex justify-between items-center group hover:border-gray-600 transition">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-primary border border-gray-700">
-                                    <i class="fa-solid <?php echo $quest['Ikon']; ?> text-xs"></i>
+                                    <i class="fa-solid <?php echo htmlspecialchars((string) $quest['Ikon'], ENT_QUOTES, 'UTF-8'); ?> text-xs"></i>
                                 </div>
                                 <div>
-                                    <p class="text-xs font-bold text-gray-300"><?php echo $quest['Baslik']; ?></p>
+                                    <p class="text-xs font-bold text-gray-300"><?php echo htmlspecialchars((string) $quest['Baslik'], ENT_QUOTES, 'UTF-8'); ?></p>
                                     <p class="text-[10px] text-green-500 font-bold">+<?php echo $quest['OdulPara']; ?> Coin</p>
                                 </div>
                             </div>

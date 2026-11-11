@@ -18,7 +18,7 @@ Aynı betikler hem **yeni** kodu hem **eski** kodu sınar: eski kodda açıklar
 Depo kökünden:
 
 ```bash
-# Yeni kod, tüm testler (a..i)
+# Yeni kod, tüm testler (a..m)
 bash tests/guvenlik/calistir.sh
 
 # Yalnızca bazı testler
@@ -37,7 +37,7 @@ bash tests/guvenlik/calistir.sh --eski <commit/branch> b d
 |---|---|---|
 | `TEST_DB` | `charmoji_ozellik` | Test veritabanı. **Veritabanı her çalıştırmada silinip (`DROP DATABASE`) yeniden oluşturulur.** `charmoji`, `charmoji_vt`, `charmoji_kk` reddedilir. |
 | `TEST_DB_HOST` / `TEST_DB_USER` / `TEST_DB_PASSWORD` | `localhost` / `root` / boş | Test veritabanı bağlantısı |
-| `PORT_TABAN` | `8150` | Kullanılan portlar: `PORT_TABAN` .. `PORT_TABAN+4` |
+| `PORT_TABAN` | `8150` | Kullanılan portlar: `PORT_TABAN` .. `PORT_TABAN+5` |
 | `PLAYWRIGHT` | `1` | `0` yapılırsa tarayıcı testleri atlanır |
 | `GECICI_SAKLA` | `0` | `1` yapılırsa geçici dizin (sunucu/PHP logları) silinmez |
 
@@ -49,7 +49,7 @@ bash tests/guvenlik/calistir.sh --eski <commit/branch> b d
    `database/seed.sql` (ayrı bir test şeması yoktur; `sema_test.sql` kaldırıldı).
 2. Geçici bir `test.env` yazar; gerçek `.env` dosyanıza dokunmaz
    (`CHARMOJI_ENV_FILE` ortam değişkeniyle gösterilir).
-3. Uygulamayı PHP yerleşik sunucusuyla iki kez başlatır: kökten
+3. Uygulamayı PHP yerleşik sunucusuyla (kökteki `sunucu.php` yönlendiricisiyle; eski kodda yoktur) iki kez başlatır: kökten
    (`http://127.0.0.1:8150/`) ve alt dizinden (`http://127.0.0.1:8151/charmoji/`).
 4. Seçilen testleri çalıştırır, sonunda özet basar ve sunucuları kapatır.
 
@@ -64,6 +64,10 @@ bash tests/guvenlik/calistir.sh --eski <commit/branch> b d
 | `test_g_sqli.sh` | g | `habit_stat` olarak `x' OR '1'='1` reddedilir; veritabanındaki kötü `StatTuru`/`EsyaTuru` başka kullanıcıları etkilemez |
 | `test_h_duman.sh` (+ `duman_tarayici.js`) | h | Kayıt → çıkış → hatalı giriş → giriş → alışkanlık ekle → işaretle → market/avatar → çıkış; kökten ve `/charmoji/` alt dizininden; ayrıca tarayıcıda arayüz üzerinden |
 | `test_i_lint.sh` | i | `php -l` tüm PHP dosyalarında |
+| `test_j_kimlik.sh` | j | B-1: Ad=<kurban e-postası> kaydı kurbanı kilitlemez, ad ile giriş yok, geçersiz e-posta reddedilir; B-3: `O'Brien` / `o'brien@ornek.test` kaydı (ters eğik çizgisiz) + otomatik ve elle giriş |
+| `test_k_cikti.sh` (+ `xss_tarayici.js`) | k | B-2: `GorevTanimlari.Baslik/Ikon` içindeki HTML userpage'de kaçışlanır; tarayıcıda dialog/script yok |
+| `test_l_erisim.sh` | l | B-4: uygulama kopyasında `/.env`, `/.git/config`, `/database/schema.sql`, `/tests/...`, `/config/...`, `/sunucu.php` vb. kökten ve `/charmoji/` altından 404; `view/index.php`, giriş sayfası, `style/custom.css` 200 |
+| `test_m_ajax.sh` | m | K-1: başkasının alışkanlığını silme ve sahip olunmayan eşyayı kuşanma `success:false`, veri değişmez; meşru işlemler çalışır |
 
 ## Resmi şema ve fikstür kuralları
 

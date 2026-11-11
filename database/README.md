@@ -113,6 +113,23 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES,
   `log_bin_trust_function_creators=1` olmalıdır; aksi hâlde `ERROR 1419` alınır.
   `root` için gerekmez.
 
+## Uygulamayı çalıştırma
+
+Geliştirmede PHP yerleşik sunucusu **yönlendirici betikle** başlatılır (depo kökünden):
+
+```bash
+php -S 127.0.0.1:8000 -t . sunucu.php
+```
+
+`sunucu.php` olmadan (`-t .` tek başına) `.env` (DB şifresi dahil), `.git/`, `database/`,
+`tests/` ve `config/` web'den düz metin okunabilir. Yönlendirici bunlara 404 döner.
+XAMPP/Apache'de kökteki `.htaccess` aynı yolları kapatır (`AllowOverride All` gerekir).
+
+**Canlı ortam uyarısı:** Web kökü yalnızca sunulması gereken dosyaları içermelidir.
+Canlıda `.env`, `config/`, `database/`, `tests/`, `docs/` web kökünün DIŞINDA tutulmalı
+(ya da sunucu bu yolları reddedecek biçimde yapılandırılmalı); `.htaccess`/`sunucu.php`
+yalnızca ek savunmadır.
+
 ## Mevcut kuruluma migration uygulama
 
 Sıra: **001 → 002 → 003**. Üçü de tekrar çalıştırılabilir; uygulananlar `SemaGecmisi`

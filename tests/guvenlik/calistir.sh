@@ -3,7 +3,7 @@
 # Güvenlik doğrulama betiklerini çalıştırır. Ayrıntı: tests/guvenlik/README.md
 #
 # Kullanım:
-#   tests/guvenlik/calistir.sh                 # yeni kod, tüm testler (a..i)
+#   tests/guvenlik/calistir.sh                 # yeni kod, tüm testler (a..m)
 #   tests/guvenlik/calistir.sh a c g           # yalnızca seçilen testler
 #   tests/guvenlik/calistir.sh --eski          # açıkları ESKİ kodda yeniden üret
 #   tests/guvenlik/calistir.sh --eski REF b    # eski kod olarak REF (git commit) kullan
@@ -41,15 +41,15 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --eski)
             MOD="eski"
-            if [[ $# -gt 1 && ! "$2" =~ ^[a-i]$ ]]; then ESKI_REF="$2"; shift; fi ;;
+            if [[ $# -gt 1 && ! "$2" =~ ^[a-m]$ ]]; then ESKI_REF="$2"; shift; fi ;;
         -h|--help)
             sed -n '2,20p' "$0"; exit 0 ;;
-        [a-i]) SECILENLER+=("$1") ;;
+        [a-m]) SECILENLER+=("$1") ;;
         *) echo "Bilinmeyen argüman: $1" >&2; exit 2 ;;
     esac
     shift
 done
-[[ ${#SECILENLER[@]} -eq 0 ]] && SECILENLER=(a b c d e f g h i)
+[[ ${#SECILENLER[@]} -eq 0 ]] && SECILENLER=(a b c d e f g h i j k l m)
 ESKI_REF="${ESKI_REF:-$ESKI_REF_VARSAYILAN}"
 
 GECICI="$(mktemp -d "${TMPDIR:-/tmp}/charmoji-guvenlik.XXXXXX")"
@@ -69,12 +69,18 @@ trap temizle EXIT
 
 source "$TEST_DIZINI/ortak.sh"
 
+# yonlendirici_yolu DOCROOT -> uygulamanın sunucu.php yönlendiricisi (varsa; eski kodda yoktur).
+# Gerçek kurulumdaki gibi gizli yollar kapatılır. Docroot bir symlink altdizinse UYGULAMA kullanılır.
+yonlendirici_yolu() {
+    if [[ -f "$UYGULAMA/sunucu.php" ]]; then printf '%s' "$UYGULAMA/sunucu.php"; fi
+}
+
 # sunucu_baslat PORT DOCROOT ENV_DOSYASI GUNLUK [ek env atamaları...]
 sunucu_baslat() {
     local port="$1" kok="$2" envdosyasi="$3" gunluk="$4"; shift 4
     env -u DB_HOST -u DB_NAME -u DB_USER -u DB_PASSWORD -u DB_PORT -u APP_LOG_FILE \
         CHARMOJI_ENV_FILE="$envdosyasi" "$@" \
-        php -d session.save_path="$GECICI/oturumlar" -S "127.0.0.1:$port" -t "$kok" > "$gunluk" 2>&1 &
+        php -d session.save_path="$GECICI/oturumlar" -S "127.0.0.1:$port" -t "$kok" $(yonlendirici_yolu "$kok") > "$gunluk" 2>&1 &
     SUNUCU_PIDLERI+=($!)
     for _ in $(seq 1 50); do
         if curl -s -o /dev/null "http://127.0.0.1:$port/"; then return 0; fi
