@@ -15,9 +15,32 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$kullaniciID = $_SESSION['user_id'];
+$kullaniciID = (int) $_SESSION['user_id'];
 $conn = get_db_connection();
 $bugun = date('Y-m-d');
+
+// Kullanıcıya gösterilebilecek (iş kuralı) hatalar. Bunların dışındaki her
+// istisna (ör. mysqli_sql_exception) log'a yazılır, kullanıcıya genel mesaj döner.
+class KullaniciHatasi extends Exception {}
+
+function ajax_hata_mesaji(Throwable $e): string {
+    if ($e instanceof KullaniciHatasi) {
+        return $e->getMessage();
+    }
+    error_log(sprintf('[charmoji] ajax_islem hatası %s: %s (%s:%d)',
+        get_class($e), $e->getMessage(), $e->getFile(), $e->getLine()));
+    return 'İşlem sırasında bir sunucu hatası oluştu.';
+}
+
+// Hazır ifade (prepared statement) kısayolu: sorguyu hazırlar, bağlar, çalıştırır.
+function sorgu(mysqli $conn, string $sql, string $tipler = '', array $degerler = []): mysqli_stmt {
+    $stmt = $conn->prepare($sql);
+    if ($tipler !== '') {
+        $stmt->bind_param($tipler, ...$degerler);
+    }
+    $stmt->execute();
+    return $stmt;
+}
 
 // ---------------------------------------------------------
 // A. AVATAR İŞLEMLERİ (BU KISIM EKSİKTİ)
@@ -48,13 +71,11 @@ if (isset($_POST['save_avatar_colors'])) {
 
     // Eksik anahtarlar varsayılanla tamamlanır; veritabanına yalnızca doğrulanmış veri yazılır.
     $colors = json_encode(array_merge(AVATAR_VARSAYILAN_RENKLER, $temiz));
-    $stmt = $conn->prepare("UPDATE Kullanicilar SET AvatarVerisi = ? WHERE KullaniciID = ?");
-    $stmt->bind_param("si", $colors, $kullaniciID);
-    
-    if($stmt->execute()) {
+    try {
+        sorgu($conn, "UPDATE Kullanicilar SET AvatarVerisi = ? WHERE KullaniciID = ?", "si", [$colors, $kullaniciID]);
         echo json_encode(['success' => true, 'message' => 'Görünüm kaydedildi!']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Veritabanı hatası.']);
+    } catch (Throwable $e) {
+        echo json_encode(['success' => false, 'message' => ajax_hata_mesaji($e)]);
     }
     exit();
 }
@@ -62,29 +83,32 @@ if (isset($_POST['save_avatar_colors'])) {
 // A2. Eşya Kuşanma (Equip)
 if (isset($_POST['equip_item_id'])) {
     $esyaID = intval($_POST['equip_item_id']);
-    
+
     try {
         $conn->begin_transaction();
 
         // 1. Eşyanın türünü bul (Şapka mı, Gözlük mü?)
-        $turSql = $conn->query("SELECT EsyaTuru FROM MarketEsyalari WHERE EsyaID = $esyaID")->fetch_assoc();
-        if(!$turSql) throw new Exception("Eşya bulunamadı.");
+        $turSql = sorgu($conn, "SELECT EsyaTuru FROM MarketEsyalari WHERE EsyaID = ?", "i", [$esyaID])
+            ->get_result()->fetch_assoc();
+        if(!$turSql) throw new KullaniciHatasi("Eşya bulunamadı.");
         $tur = $turSql['EsyaTuru'];
 
         // 2. Aynı türdeki diğer eşyaları çıkar (Sadece 1 şapka takılabilir)
-        $conn->query("UPDATE KullaniciEnvanteri KE 
-                      JOIN MarketEsyalari ME ON KE.EsyaID = ME.EsyaID 
-                      SET KE.KusandiMi = 0 
-                      WHERE KE.KullaniciID = $kullaniciID AND ME.EsyaTuru = '$tur'");
+        // EsyaTuru veritabanından gelen metindir: sorguya gömülmez, bağlanır.
+        sorgu($conn, "UPDATE KullaniciEnvanteri KE
+                      JOIN MarketEsyalari ME ON KE.EsyaID = ME.EsyaID
+                      SET KE.KusandiMi = 0
+                      WHERE KE.KullaniciID = ? AND ME.EsyaTuru = ?", "is", [$kullaniciID, $tur]);
 
         // 3. Seçilen eşyayı kuşan
-        $conn->query("UPDATE KullaniciEnvanteri SET KusandiMi = 1 WHERE KullaniciID = $kullaniciID AND EsyaID = $esyaID");
+        sorgu($conn, "UPDATE KullaniciEnvanteri SET KusandiMi = 1 WHERE KullaniciID = ? AND EsyaID = ?",
+            "ii", [$kullaniciID, $esyaID]);
 
         $conn->commit();
         echo json_encode(['success' => true]);
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         $conn->rollback();
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => ajax_hata_mesaji($e)]);
     }
     exit();
 }
@@ -95,34 +119,37 @@ if (isset($_POST['equip_item_id'])) {
 
 if (isset($_POST['buy_item_id'])) {
     $esyaID = intval($_POST['buy_item_id']);
-    
+
     try {
         $conn->begin_transaction();
 
         // Fiyat ve Bakiye Kontrolü
-        $esya = $conn->query("SELECT Fiyat FROM MarketEsyalari WHERE EsyaID = $esyaID")->fetch_assoc();
-        $user = $conn->query("SELECT Bakiye FROM Kullanicilar WHERE KullaniciID = $kullaniciID")->fetch_assoc();
+        $esya = sorgu($conn, "SELECT Fiyat FROM MarketEsyalari WHERE EsyaID = ?", "i", [$esyaID])
+            ->get_result()->fetch_assoc();
+        $user = sorgu($conn, "SELECT Bakiye FROM Kullanicilar WHERE KullaniciID = ?", "i", [$kullaniciID])
+            ->get_result()->fetch_assoc();
 
-        if (!$esya) throw new Exception("Ürün bulunamadı.");
-        
+        if (!$esya) throw new KullaniciHatasi("Ürün bulunamadı.");
+
         // Zaten var mı?
-        $checkInv = $conn->query("SELECT EnvanterID FROM KullaniciEnvanteri WHERE KullaniciID = $kullaniciID AND EsyaID = $esyaID");
-        if ($checkInv->num_rows > 0) throw new Exception("Zaten sahipsin.");
+        $checkInv = sorgu($conn, "SELECT EnvanterID FROM KullaniciEnvanteri WHERE KullaniciID = ? AND EsyaID = ?",
+            "ii", [$kullaniciID, $esyaID])->get_result();
+        if ($checkInv->num_rows > 0) throw new KullaniciHatasi("Zaten sahipsin.");
 
         // Para yetiyor mu?
-        if ($user['Bakiye'] < $esya['Fiyat']) throw new Exception("Yetersiz bakiye.");
+        if ($user['Bakiye'] < $esya['Fiyat']) throw new KullaniciHatasi("Yetersiz bakiye.");
 
         // Satın alma işlemi
         $newBalance = $user['Bakiye'] - $esya['Fiyat'];
-        $conn->query("UPDATE Kullanicilar SET Bakiye = $newBalance WHERE KullaniciID = $kullaniciID");
-        $conn->query("INSERT INTO KullaniciEnvanteri (KullaniciID, EsyaID) VALUES ($kullaniciID, $esyaID)");
+        sorgu($conn, "UPDATE Kullanicilar SET Bakiye = ? WHERE KullaniciID = ?", "di", [$newBalance, $kullaniciID]);
+        sorgu($conn, "INSERT INTO KullaniciEnvanteri (KullaniciID, EsyaID) VALUES (?, ?)", "ii", [$kullaniciID, $esyaID]);
 
         $conn->commit();
         echo json_encode(['success' => true, 'new_balance' => $newBalance, 'message' => 'Satın alındı!']);
 
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         $conn->rollback();
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => ajax_hata_mesaji($e)]);
     }
     exit();
 }
@@ -133,33 +160,33 @@ if (isset($_POST['buy_item_id'])) {
 
 if (isset($_POST['claim_quest_id'])) {
     $kg_id = intval($_POST['claim_quest_id']);
-    
+
     try {
         $conn->begin_transaction();
 
-        $sql = "SELECT KG.TamamlandiMi, KG.OdulAlindiMi, GT.OdulPara 
+        $sql = "SELECT KG.TamamlandiMi, KG.OdulAlindiMi, GT.OdulPara
                 FROM KullaniciGunlukGorevleri KG
                 JOIN GorevTanimlari GT ON KG.GorevTanimID = GT.GorevTanimID
                 WHERE KG.KullaniciGorevID = ? AND KG.KullaniciID = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ii", $kg_id, $kullaniciID);
-        $stmt->execute();
-        $gorev = $stmt->get_result()->fetch_assoc();
+        $gorev = sorgu($conn, $sql, "ii", [$kg_id, $kullaniciID])->get_result()->fetch_assoc();
 
         if ($gorev && $gorev['TamamlandiMi'] == 1 && $gorev['OdulAlindiMi'] == 0) {
-            $conn->query("UPDATE Kullanicilar SET Bakiye = Bakiye + {$gorev['OdulPara']} WHERE KullaniciID = $kullaniciID");
-            $conn->query("UPDATE KullaniciGunlukGorevleri SET OdulAlindiMi = 1 WHERE KullaniciGorevID = $kg_id");
-            
-            $newBalance = $conn->query("SELECT Bakiye FROM Kullanicilar WHERE KullaniciID = $kullaniciID")->fetch_assoc()['Bakiye'];
-            
+            sorgu($conn, "UPDATE Kullanicilar SET Bakiye = Bakiye + ? WHERE KullaniciID = ?",
+                "di", [$gorev['OdulPara'], $kullaniciID]);
+            sorgu($conn, "UPDATE KullaniciGunlukGorevleri SET OdulAlindiMi = 1 WHERE KullaniciGorevID = ? AND KullaniciID = ?",
+                "ii", [$kg_id, $kullaniciID]);
+
+            $newBalance = sorgu($conn, "SELECT Bakiye FROM Kullanicilar WHERE KullaniciID = ?", "i", [$kullaniciID])
+                ->get_result()->fetch_assoc()['Bakiye'];
+
             $conn->commit();
             echo json_encode(['success' => true, 'new_balance' => $newBalance]);
         } else {
-            throw new Exception("Ödül alınamaz.");
+            throw new KullaniciHatasi("Ödül alınamaz.");
         }
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         $conn->rollback();
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => ajax_hata_mesaji($e)]);
     }
     exit();
 }
@@ -169,12 +196,13 @@ if (isset($_POST['claim_quest_id'])) {
 // ---------------------------------------------------------
 
 if (isset($_POST['is_delete']) && $_POST['is_delete'] == 1) {
-    $ka_id = intval($_POST['ka_id']);
-    $stmt = $conn->prepare("DELETE FROM KullaniciAliskanliklari WHERE KullaniciAliskanlikID = ? AND KullaniciID = ?");
-    $stmt->bind_param("ii", $ka_id, $kullaniciID);
-    if ($stmt->execute()) {
+    $ka_id = intval($_POST['ka_id'] ?? 0);
+    try {
+        sorgu($conn, "DELETE FROM KullaniciAliskanliklari WHERE KullaniciAliskanlikID = ? AND KullaniciID = ?",
+            "ii", [$ka_id, $kullaniciID]);
         echo json_encode(['success' => true]);
-    } else {
+    } catch (Throwable $e) {
+        ajax_hata_mesaji($e); // log'a yaz
         echo json_encode(['success' => false, 'message' => 'Silinemedi']);
     }
     exit();
@@ -191,7 +219,7 @@ if (!isset($_POST['ka_id']) || !isset($_POST['durum'])) {
 }
 
 $ka_id = intval($_POST['ka_id']);
-$durum = intval($_POST['durum']); 
+$durum = intval($_POST['durum']);
 $dunkuTarih = date('Y-m-d', strtotime('-1 day'));
 
 // İstatistik fonksiyonu
@@ -204,21 +232,20 @@ function hesaplaLevelVerileri($toplamPuan) {
 try {
     $conn->begin_transaction();
 
-    $sql = "SELECT KA.Seri, KA.SonIslemTarihi, A.Puan, A.StatTuru 
+    $sql = "SELECT KA.Seri, KA.SonIslemTarihi, A.Puan, A.StatTuru
             FROM KullaniciAliskanliklari KA
             JOIN Aliskanliklar A ON KA.AliskanlikID = A.AliskanlikID
             WHERE KA.KullaniciAliskanlikID = ? AND KA.KullaniciID = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ii", $ka_id, $kullaniciID);
-    $stmt->execute();
-    $veri = $stmt->get_result()->fetch_assoc();
+    $veri = sorgu($conn, $sql, "ii", [$ka_id, $kullaniciID])->get_result()->fetch_assoc();
 
-    if (!$veri) throw new Exception("Kayıt bulunamadı.");
+    if (!$veri) throw new KullaniciHatasi("Kayıt bulunamadı.");
 
     $basePuan = $veri['Puan'];
     $mevcutSeri = $veri['Seri'];
     $sonTarih = $veri['SonIslemTarihi'];
-    $statTuru = $veri['StatTuru'];
+    // StatTuru veritabanından gelir ama kaynağı kullanıcı girdisidir (ikinci
+    // derece enjeksiyon): aşağıdaki sorgulara asla gömülmez, hep bağlanır.
+    $statTuru = (string) $veri['StatTuru'];
 
     if ($durum === 1) {
         // --- YAPILDI ---
@@ -229,32 +256,35 @@ try {
         $carpan = min(2.00, 1 + (floor($yeniSeri / 7) * 0.25));
         $kazanilanPuan = round($basePuan * $carpan);
 
-        $stmt = $conn->prepare("INSERT IGNORE INTO TakipKayitlari (KullaniciAliskanlikID, Tarih, TamamlandiMi) VALUES (?, ?, 1)");
-        $stmt->bind_param("is", $ka_id, $bugun);
-        $stmt->execute();
+        $stmt = sorgu($conn, "INSERT IGNORE INTO TakipKayitlari (KullaniciAliskanlikID, Tarih, TamamlandiMi) VALUES (?, ?, 1)",
+            "is", [$ka_id, $bugun]);
 
         if ($stmt->affected_rows > 0) {
-            $conn->query("UPDATE KullaniciAliskanliklari SET Seri = $yeniSeri, SonIslemTarihi = '$bugun' WHERE KullaniciAliskanlikID = $ka_id");
-            $conn->query("UPDATE KullaniciStatlari SET ToplamPuan = ToplamPuan + $kazanilanPuan WHERE KullaniciID = $kullaniciID AND StatTuru = '$statTuru'");
-            
+            sorgu($conn, "UPDATE KullaniciAliskanliklari SET Seri = ?, SonIslemTarihi = ? WHERE KullaniciAliskanlikID = ?",
+                "isi", [$yeniSeri, $bugun, $ka_id]);
+            sorgu($conn, "UPDATE KullaniciStatlari SET ToplamPuan = ToplamPuan + ? WHERE KullaniciID = ? AND StatTuru = ?",
+                "iis", [(int) $kazanilanPuan, $kullaniciID, $statTuru]);
+
             // Günlük görevi ilerlet
-            $conn->query("UPDATE KullaniciGunlukGorevleri KG JOIN GorevTanimlari GT ON KG.GorevTanimID = GT.GorevTanimID 
+            sorgu($conn, "UPDATE KullaniciGunlukGorevleri KG JOIN GorevTanimlari GT ON KG.GorevTanimID = GT.GorevTanimID
                           SET KG.MevcutIlerleme = KG.MevcutIlerleme + 1, KG.TamamlandiMi = CASE WHEN (KG.MevcutIlerleme + 1) >= GT.HedefSayi THEN 1 ELSE 0 END
-                          WHERE KG.KullaniciID = $kullaniciID AND KG.Tarih = '$bugun' AND KG.TamamlandiMi = 0 AND GT.Baslik LIKE '%alışkanlık%'");
+                          WHERE KG.KullaniciID = ? AND KG.Tarih = ? AND KG.TamamlandiMi = 0 AND GT.Baslik LIKE '%alışkanlık%'",
+                "is", [$kullaniciID, $bugun]);
         }
     } else {
         // --- GERİ ALINDI ---
         $carpan = min(2.00, 1 + (floor($mevcutSeri / 7) * 0.25));
         $silinecekPuan = round($basePuan * $carpan);
 
-        $stmt = $conn->prepare("DELETE FROM TakipKayitlari WHERE KullaniciAliskanlikID = ? AND Tarih = ?");
-        $stmt->bind_param("is", $ka_id, $bugun);
-        $stmt->execute();
+        $stmt = sorgu($conn, "DELETE FROM TakipKayitlari WHERE KullaniciAliskanlikID = ? AND Tarih = ?",
+            "is", [$ka_id, $bugun]);
 
         if ($stmt->affected_rows > 0) {
             $yeniSeri = max(0, $mevcutSeri - 1);
-            $conn->query("UPDATE KullaniciAliskanliklari SET Seri = $yeniSeri WHERE KullaniciAliskanlikID = $ka_id");
-            $conn->query("UPDATE KullaniciStatlari SET ToplamPuan = ToplamPuan - $silinecekPuan WHERE KullaniciID = $kullaniciID AND StatTuru = '$statTuru'");
+            sorgu($conn, "UPDATE KullaniciAliskanliklari SET Seri = ? WHERE KullaniciAliskanlikID = ?",
+                "ii", [$yeniSeri, $ka_id]);
+            sorgu($conn, "UPDATE KullaniciStatlari SET ToplamPuan = ToplamPuan - ? WHERE KullaniciID = ? AND StatTuru = ?",
+                "iis", [(int) $silinecekPuan, $kullaniciID, $statTuru]);
         } else {
             $yeniSeri = $mevcutSeri;
         }
@@ -263,11 +293,13 @@ try {
     $conn->commit();
 
     // Güncel verileri dön
-    $statSql = $conn->query("SELECT ToplamPuan FROM KullaniciStatlari WHERE KullaniciID = $kullaniciID AND StatTuru = '$statTuru'");
-    $yeniToplamPuan = $statSql->fetch_assoc()['ToplamPuan'];
+    $statSatiri = sorgu($conn, "SELECT ToplamPuan FROM KullaniciStatlari WHERE KullaniciID = ? AND StatTuru = ?",
+        "is", [$kullaniciID, $statTuru])->get_result()->fetch_assoc();
+    $yeniToplamPuan = $statSatiri['ToplamPuan'] ?? 0;
     $statVerisi = hesaplaLevelVerileri($yeniToplamPuan);
 
-    $allStats = $conn->query("SELECT ToplamPuan FROM KullaniciStatlari WHERE KullaniciID = $kullaniciID");
+    $allStats = sorgu($conn, "SELECT ToplamPuan FROM KullaniciStatlari WHERE KullaniciID = ?", "i", [$kullaniciID])
+        ->get_result();
     $toplamLevel = 0; $count = 0;
     while($r = $allStats->fetch_assoc()) {
         $l = hesaplaLevelVerileri($r['ToplamPuan']);
@@ -284,8 +316,7 @@ try {
         'global_level' => $genelLevel
     ]);
 
-} catch (Exception $e) {
+} catch (Throwable $e) {
     $conn->rollback();
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => ajax_hata_mesaji($e)]);
 }
-?>

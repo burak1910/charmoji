@@ -64,7 +64,12 @@ $jsonLevels = json_encode($siraliLevels); $jsonLabels = json_encode($varsayilanS
 $ortalamaLevel = floor(array_sum($levels) / count($levels));
 
 if (isset($_POST['add_habit_btn'])) {
-    $yeniAd = trim($_POST['habit_name']); $secilenStat = $_POST['habit_stat']; $puan = 10;
+    $yeniAd = trim($_POST['habit_name'] ?? ''); $secilenStat = $_POST['habit_stat'] ?? ''; $puan = 10;
+    // Yalnızca beş geçerli stat kabul edilir (ikinci derece SQL enjeksiyonuna karşı).
+    if (!is_string($secilenStat) || !in_array($secilenStat, $varsayilanStatlar, true)) {
+        $_SESSION['error'] = "Geçersiz yetenek türü.";
+        header("Location: userpage.php"); exit();
+    }
     if (!empty($yeniAd)) {
         $sorgu = $conn->prepare("SELECT AliskanlikID FROM Aliskanliklar WHERE Ad = ?"); $sorgu->bind_param("s", $yeniAd); $sorgu->execute(); $sonuc = $sorgu->get_result();
         if($sonuc->num_rows > 0) { $aliskanlikID = $sonuc->fetch_assoc()['AliskanlikID']; } 
@@ -236,7 +241,7 @@ $topluluk = FriendManager::getCommunitySuggestions($kullaniciID);
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-3 mt-2">
-                                        <span class="text-[10px] bg-gray-900 text-gray-400 border border-gray-700 px-2 py-0.5 rounded uppercase tracking-wider font-bold"><?php echo $gorev['StatTuru']; ?></span>
+                                        <span class="text-[10px] bg-gray-900 text-gray-400 border border-gray-700 px-2 py-0.5 rounded uppercase tracking-wider font-bold"><?php echo htmlspecialchars((string) $gorev['StatTuru'], ENT_QUOTES, 'UTF-8'); ?></span>
                                         <span class="text-[10px] text-green-500 font-bold flex items-center gap-1"><i class="fa-solid fa-caret-up"></i> +<?php echo round($gorev['Puan'] * $carpan); ?> XP</span>
                                     </div>
                                 </div>
