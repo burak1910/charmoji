@@ -1,7 +1,7 @@
 <?php
 // view/market.php
-session_start();
-require_once __DIR__ . '/../service/auth.php'; 
+// Oturum, auth.php içinde güvenli çerez ayarlarıyla başlatılır.
+require_once __DIR__ . '/../service/auth.php';
 
 if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
 
@@ -172,6 +172,8 @@ $urunler = $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
     </div>
 
     <script>
+        // AJAX istekleri için CSRF jetonu (X-CSRF-Token başlığında gönderilir).
+        const CSRF_JETONU = <?php echo json_encode(csrf_jetonu()); ?>;
         function buyItem(itemId, price, btn) {
             const currentBalance = parseInt(document.getElementById('user-balance').innerText.replace(/,/g, ''));
             
@@ -191,7 +193,7 @@ $urunler = $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
 
             fetch('ajax_islem.php', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': CSRF_JETONU},
                 body: `buy_item_id=${itemId}`
             })
             .then(res => res.json())

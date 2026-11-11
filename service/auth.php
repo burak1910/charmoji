@@ -4,32 +4,29 @@
 // Çıktı tamponlamayı başlat (Header hatalarını engeller)
 ob_start();
 
-// Session başlatma kontrolü (Hata vermemesi için)
-if (session_status() === PHP_SESSION_NONE) {
-    session_set_cookie_params(0, '/'); 
-    session_start();
-}
+// Hata gösterimi kapalı/loglama açık ve .env yapılandırması; her şeyden önce yüklenir.
+require_once __DIR__ . '/../config/uygulama.php';
 
-// Hata Raporlama
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+// Oturumu güvenli çerez ayarlarıyla başlat (HttpOnly, SameSite, strict mode).
+require_once __DIR__ . '/guvenlik.php';
+guvenli_oturum_baslat();
 
 // ----------------------------------------------------------------
-// 1. Veritabanı Bağlantısı
+// 1. Veritabanı Bağlantısı (bilgiler .env / ortam değişkenlerinden)
 // ----------------------------------------------------------------
-$servername = "localhost";
-$db_username = "root"; 
-$db_password = ""; 
-$dbname = "charmoji"; 
-
 function get_db_connection() {
-    global $servername, $db_username, $db_password, $dbname;
-    $conn = new mysqli($servername, $db_username, $db_password, $dbname);
+    // Hatalar istisna olarak fırlatılır; ayrıntı log'a yazılır, kullanıcıya
+    // genel mesaj gösterilir (bkz. config/uygulama.php).
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-    if ($conn->connect_error) {
-        die("KRİTİK HATA: Veritabanına bağlanılamadı! " . $conn->connect_error);
-    }
+    $port = (int) charmoji_ayar('DB_PORT', '3306');
+    $conn = new mysqli(
+        charmoji_ayar('DB_HOST'),
+        charmoji_ayar('DB_USER'),
+        charmoji_ayar('DB_PASSWORD', ''),
+        charmoji_ayar('DB_NAME'),
+        $port > 0 ? $port : 3306
+    );
     $conn->set_charset("utf8mb4");
     return $conn;
 }
@@ -108,9 +105,12 @@ if (basename(__FILE__) == basename($_SERVER["SCRIPT_FILENAME"])) {
 
     if ($_SERVER["REQUEST_METHOD"] !== "POST") {
         // Formdan gelmiyorsa ana sayfaya at
-        header("Location: ../view/index.php"); 
+        header("Location: ../view/index.php");
         exit();
     }
+
+    // Giriş ve kayıt formları CSRF jetonu taşımalı (login CSRF'e karşı).
+    csrf_dogrula();
 
     if (isset($_POST['username']) && isset($_POST['password']) && !isset($_POST['fullname'])) {
         handle_login(); 
@@ -140,6 +140,8 @@ function handle_login() {
     $user = AuthManager::login($email_or_username, $password);
 
     if ($user) {
+        // Oturum sabitlemeye karşı: girişte yeni oturum kimliği.
+        oturum_kimligini_yenile();
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
         $_SESSION['fullname'] = $user['fullname'];
@@ -172,6 +174,7 @@ function handle_register() {
         // Otomatik giriş yap
         $user = AuthManager::login($data['email'], $data['password']);
         if ($user) {
+            oturum_kimligini_yenile();
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['fullname'] = $user['fullname'];

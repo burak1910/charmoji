@@ -24,11 +24,14 @@ class FriendManager {
         // DÜZELTME: 'Beklemede' yerine 0 gönderiyoruz.
         $stmt = $conn->prepare("INSERT INTO Arkadasliklar (IstekGonderenID, IstekAlanID, Durum) VALUES (?, ?, 0)");
         $stmt->bind_param("ii", $myID, $targetID);
-        
-        if ($stmt->execute()) {
+
+        try {
+            $stmt->execute();
             return true;
-        } else {
-            return "Veritabanı hatası: " . $stmt->error;
+        } catch (mysqli_sql_exception $e) {
+            // SQL hata metni kullanıcıya gösterilmez, log'a yazılır (ör. olmayan kullanıcı ID'si).
+            error_log('[charmoji] Arkadaşlık isteği eklenemedi: ' . $e->getMessage());
+            return "İstek gönderilemedi.";
         }
     }
 
@@ -58,20 +61,34 @@ class FriendManager {
     }
 
     // 2. İsteği Kabul Et
+    // Yalnızca isteğin ALICISI, yalnızca BEKLEYEN (Durum = 0) bir isteği kabul edebilir.
+    // Hiçbir satır değişmediyse (başkasının kaydı, zaten kabul edilmiş, yok) false döner.
     public static function acceptRequest($istekID, $myID) {
         $conn = get_db_connection();
-        // DÜZELTME: 'Kabul' yerine 1 yapıyoruz.
-        $stmt = $conn->prepare("UPDATE Arkadasliklar SET Durum = 1 WHERE ArkadaslikID = ? AND IstekAlanID = ?");
+        $stmt = $conn->prepare("UPDATE Arkadasliklar SET Durum = 1 WHERE ArkadaslikID = ? AND IstekAlanID = ? AND Durum = 0");
         $stmt->bind_param("ii", $istekID, $myID);
-        return $stmt->execute();
+        $stmt->execute();
+        return $stmt->affected_rows === 1;
     }
 
-    // 3. İsteği Reddet veya Arkadaşı Sil
-    public static function removeFriend($istekID) {
+    // 3a. İsteği Reddet
+    // Yalnızca isteğin ALICISI, yalnızca BEKLEYEN bir isteği reddedebilir (kayıt silinir).
+    public static function rejectRequest($istekID, $myID) {
         $conn = get_db_connection();
-        $stmt = $conn->prepare("DELETE FROM Arkadasliklar WHERE ArkadaslikID = ?");
-        $stmt->bind_param("i", $istekID);
-        return $stmt->execute();
+        $stmt = $conn->prepare("DELETE FROM Arkadasliklar WHERE ArkadaslikID = ? AND IstekAlanID = ? AND Durum = 0");
+        $stmt->bind_param("ii", $istekID, $myID);
+        $stmt->execute();
+        return $stmt->affected_rows === 1;
+    }
+
+    // 3b. Arkadaşı Sil
+    // Yalnızca kabul edilmiş (Durum = 1) bir arkadaşlığı, yalnızca iki taraftan biri silebilir.
+    public static function removeFriend($arkadaslikID, $myID) {
+        $conn = get_db_connection();
+        $stmt = $conn->prepare("DELETE FROM Arkadasliklar WHERE ArkadaslikID = ? AND Durum = 1 AND (IstekGonderenID = ? OR IstekAlanID = ?)");
+        $stmt->bind_param("iii", $arkadaslikID, $myID, $myID);
+        $stmt->execute();
+        return $stmt->affected_rows === 1;
     }
 
     // 4. Bana Gelen Bekleyen İstekler

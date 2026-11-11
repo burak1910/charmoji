@@ -1,6 +1,6 @@
 <?php
 // service/friend_action.php
-session_start();
+// auth.php (FriendManager üzerinden) oturumu güvenli ayarlarla başlatır.
 require_once __DIR__ . '/FriendManager.php';
 
 // Güvenlik: Giriş yapmamışsa at
@@ -9,11 +9,13 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$myID = $_SESSION['user_id'];
+$myID = (int) $_SESSION['user_id'];
 
 // POST isteği gelmiş mi?
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
+    // Jetonsuz ya da yanlış jetonlu istek 403 ile reddedilir.
+    csrf_dogrula();
+
     // 1. İSTEK GÖNDERME (Topluluk sekmesinden)
     if (isset($_POST['action']) && $_POST['action'] === 'send_request') {
         $targetID = intval($_POST['target_id']);
@@ -38,12 +40,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // 3. İSTEK REDDETME (İstekler sekmesinden)
+    // 3. İSTEK REDDETME (İstekler sekmesinden) - yalnızca bekleyen ve bana gelen istek
     elseif (isset($_POST['reject_request_id'])) {
         $istekID = intval($_POST['reject_request_id']);
-        
-        if (FriendManager::removeFriend($istekID)) {
-            $_SESSION['success'] = "İstek reddedildi/silindi.";
+
+        if (FriendManager::rejectRequest($istekID, $myID)) {
+            $_SESSION['success'] = "İstek reddedildi.";
+        } else {
+            $_SESSION['error'] = "İşlem başarısız.";
+        }
+    }
+
+    // 4. ARKADAŞI SİLME - yalnızca tarafı olduğum kabul edilmiş arkadaşlık
+    elseif (isset($_POST['remove_friend_id'])) {
+        $arkadaslikID = intval($_POST['remove_friend_id']);
+
+        if (FriendManager::removeFriend($arkadaslikID, $myID)) {
+            $_SESSION['success'] = "Arkadaş silindi.";
         } else {
             $_SESSION['error'] = "İşlem başarısız.";
         }
