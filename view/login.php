@@ -137,7 +137,7 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
                 <?= csrf_alani() ?>
                 
                 <div>
-                    <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-posta veya Kullanıcı Adı</label>
+                    <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-posta</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                             <i data-lucide="mail" class="w-5 h-5"></i>

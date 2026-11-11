@@ -38,8 +38,8 @@ class AuthManager {
     public static function register(array $data) {
         $conn = get_db_connection();
         
-        $fullname = $conn->real_escape_string($data['fullname']);
-        $email = $conn->real_escape_string($data['email']);
+        $fullname = $data['fullname'];
+        $email = $data['email'];
         $password = $data['password'];
         $kayitTarihi = date('Y-m-d');
 
@@ -71,8 +71,8 @@ class AuthManager {
     public static function login($emailOrUsername, $password) {
         $conn = get_db_connection();
         
-        $login_query = $conn->prepare("SELECT KullaniciID, Ad, Eposta, SifreHash FROM Kullanicilar WHERE Eposta = ? OR Ad = ?");
-        $login_query->bind_param("ss", $emailOrUsername, $emailOrUsername); 
+        $login_query = $conn->prepare("SELECT KullaniciID, Ad, Eposta, SifreHash FROM Kullanicilar WHERE Eposta = ?");
+        $login_query->bind_param("s", $emailOrUsername);
         $login_query->execute();
         $result = $login_query->get_result();
 
@@ -166,6 +166,12 @@ function handle_register() {
 
     if (empty($data['fullname']) || empty($data['email']) || empty($data['password']) || $data['password'] !== $data['confirm_password']) {
         $_SESSION['error'] = "Lütfen tüm alanları doldurun ve şifrelerin eşleştiğinden emin olun.";
+        header("Location: ../view/register.php");
+        exit();
+    }
+
+    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['error'] = "Lütfen geçerli bir e-posta adresi girin.";
         header("Location: ../view/register.php");
         exit();
     }
