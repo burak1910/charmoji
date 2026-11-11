@@ -9,7 +9,7 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$myID = $_SESSION['user_id'];
+$myID = (int) $_SESSION['user_id'];
 
 // POST isteği gelmiş mi?
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -38,12 +38,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // 3. İSTEK REDDETME (İstekler sekmesinden)
+    // 3. İSTEK REDDETME (İstekler sekmesinden) - yalnızca bekleyen ve bana gelen istek
     elseif (isset($_POST['reject_request_id'])) {
         $istekID = intval($_POST['reject_request_id']);
-        
-        if (FriendManager::removeFriend($istekID)) {
-            $_SESSION['success'] = "İstek reddedildi/silindi.";
+
+        if (FriendManager::rejectRequest($istekID, $myID)) {
+            $_SESSION['success'] = "İstek reddedildi.";
+        } else {
+            $_SESSION['error'] = "İşlem başarısız.";
+        }
+    }
+
+    // 4. ARKADAŞI SİLME - yalnızca tarafı olduğum kabul edilmiş arkadaşlık
+    elseif (isset($_POST['remove_friend_id'])) {
+        $arkadaslikID = intval($_POST['remove_friend_id']);
+
+        if (FriendManager::removeFriend($arkadaslikID, $myID)) {
+            $_SESSION['success'] = "Arkadaş silindi.";
         } else {
             $_SESSION['error'] = "İşlem başarısız.";
         }
