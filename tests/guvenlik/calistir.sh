@@ -101,7 +101,11 @@ export UYGULAMA LOGIN_YOLU REGISTER_YOLU
 echo "Mod: $MOD   Uygulama: $UYGULAMA   Veritabanı: $TEST_DB"
 [[ "$MOD" == "eski" ]] && echo "Eski kod: $ESKI_REF (yalnızca DB adı ve FriendManager dosya adı uyarlandı)"
 
-mysql_komutu "$TEST_DB" < "$TEST_DIZINI/sema_test.sql" || { echo "HATA: test şeması kurulamadı." >&2; exit 2; }
+# Resmi şema: veritabanı sıfırlanır, database/schema.sql + database/seed.sql kurulur.
+mysql_komutu -e "DROP DATABASE IF EXISTS \`$TEST_DB\`; CREATE DATABASE \`$TEST_DB\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci" \
+    || { echo "HATA: test veritabanı oluşturulamadı." >&2; exit 2; }
+mysql_komutu "$TEST_DB" < "$KOK/database/schema.sql" || { echo "HATA: database/schema.sql kurulamadı." >&2; exit 2; }
+mysql_komutu "$TEST_DB" < "$KOK/database/seed.sql" || { echo "HATA: database/seed.sql kurulamadı." >&2; exit 2; }
 
 # Testlerin kullandığı .env (gerçek .env'e dokunulmaz; CHARMOJI_ENV_FILE ile gösterilir)
 TEST_ENV="$GECICI/test.env"

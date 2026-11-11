@@ -10,7 +10,7 @@ Aynı betikler hem **yeni** kodu hem **eski** kodu sınar: eski kodda açıklar
 ## Gereksinimler
 
 - PHP 8.x CLI (`mysqli` eklentisiyle), `curl`, `mysql` istemcisi
-- Erişilebilir bir MySQL 8 sunucusu ve **testlere ayrılmış** bir veritabanı
+- Erişilebilir bir MySQL 8.0.16+ sunucusu (resmi şemadaki CHECK kısıtları için) ve **testlere ayrılmış** bir veritabanı
 - İsteğe bağlı: Node.js + Playwright (tarayıcı testleri; yoksa atlanır)
 
 ## Çalıştırma
@@ -35,7 +35,7 @@ bash tests/guvenlik/calistir.sh --eski <commit/branch> b d
 
 | Değişken | Varsayılan | Açıklama |
 |---|---|---|
-| `TEST_DB` | `charmoji_ozellik` | Test veritabanı. **İçindeki tablolar her çalıştırmada silinip yeniden kurulur.** `charmoji`, `charmoji_vt`, `charmoji_kk` reddedilir. |
+| `TEST_DB` | `charmoji_ozellik` | Test veritabanı. **Veritabanı her çalıştırmada silinip (`DROP DATABASE`) yeniden oluşturulur.** `charmoji`, `charmoji_vt`, `charmoji_kk` reddedilir. |
 | `TEST_DB_HOST` / `TEST_DB_USER` / `TEST_DB_PASSWORD` | `localhost` / `root` / boş | Test veritabanı bağlantısı |
 | `PORT_TABAN` | `8150` | Kullanılan portlar: `PORT_TABAN` .. `PORT_TABAN+4` |
 | `PLAYWRIGHT` | `1` | `0` yapılırsa tarayıcı testleri atlanır |
@@ -45,8 +45,8 @@ bash tests/guvenlik/calistir.sh --eski <commit/branch> b d
 
 ## Ne yapar?
 
-1. `sema_test.sql` ile test veritabanını sıfırdan kurar (**yalnızca test içindir;
-   asıl şema `database/` altındadır**).
+1. Test veritabanını sıfırlar ve resmi şemayla kurar: `database/schema.sql` +
+   `database/seed.sql` (ayrı bir test şeması yoktur; `sema_test.sql` kaldırıldı).
 2. Geçici bir `test.env` yazar; gerçek `.env` dosyanıza dokunmaz
    (`CHARMOJI_ENV_FILE` ortam değişkeniyle gösterilir).
 3. Uygulamayı PHP yerleşik sunucusuyla iki kez başlatır: kökten
@@ -65,13 +65,32 @@ bash tests/guvenlik/calistir.sh --eski <commit/branch> b d
 | `test_h_duman.sh` (+ `duman_tarayici.js`) | h | Kayıt → çıkış → hatalı giriş → giriş → alışkanlık ekle → işaretle → market/avatar → çıkış; kökten ve `/charmoji/` alt dizininden; ayrıca tarayıcıda arayüz üzerinden |
 | `test_i_lint.sh` | i | `php -l` tüm PHP dosyalarında |
 
+## Resmi şema ve fikstür kuralları
+
+Testler resmi şemanın kısıtlarına uyar; kısıtı atlatmak için şema değiştirilmez.
+
+- **Arkadaşlık:** `UQ_Ark_Cift` çift başına tek kayıt izin verir. Aynı çift için ikinci
+  satır eklenmez; her senaryo ayrı kullanıcı çifti kullanır (b: bekleyen istek A-C,
+  kabul edilmiş arkadaşlık A-D, B her ikisinde üçüncü kişi; c: her friend_action ucu için
+  ayrı hedef kullanıcı).
+- **Satın alma:** seed'deki eşyalar 100-500 altındır; c testi kullanıcıya 1000 altın verir.
+- **Kötü `StatTuru`:** `CHK_KA_StatTuru` ve `CHK_KS_StatTuru` geçersiz değeri reddeder; g testi
+  bunu iki ayrı denetimle doğrular. Koddaki savunmayı yine de sınamak için kısıtsız yol
+  seçildi (kısıtı geçici kaldırmak yerine): uygulama `StatTuru`'nu hâlâ eski ortak
+  `Aliskanliklar` tablosundan okur ve o sütunda kısıt yoktur. Kötü değer orada tutulur,
+  kullanıcı satırı geçerli `Ad`/`StatTuru` ile eklenir (tetikleyici devreye girmez).
+  Sınama boş geçmesin diye fikstürün eklendiği ayrıca denetlenir. `Aliskanliklar` 004 ile
+  kaldırılınca bu fikstürün başka bir kısıtsız yola (ya da kısıtı geçici düşürmeye) taşınması gerekir.
+- **Kötü `EsyaTuru` / `AvatarVerisi`:** resmi şemada bu sütunlarda kısıt yoktur; testler aynen
+  doğrudan SQL ile kötü değer yazar.
+
 ## Eski kod modu (`--eski`)
 
 `eski_kodu_hazirla.sh` eski commit'i geçici dizine çıkarır ve çalışabilmesi için
 yalnızca iki uyarlama yapar: `service/auth.php` içindeki sabit veritabanı adını
 `TEST_DB` yapar ve `service/friendmanager.php` dosyasını `FriendManager.php` olarak
 kopyalar (aksi halde sorun 7 yüzünden `userpage.php` Linux'ta hiç açılmaz).
-Eski kodda giriş/kayıt sayfaları `service/` altında olduğundan o yollar kullanılır.
+Eski kod resmi şemayla çalışır (eski kodun yazdığı ortak `Aliskanliklar` tablosu şemada hâlâ vardır). Eski kodda giriş/kayıt sayfaları `service/` altında olduğundan o yollar kullanılır.
 
 Eski kodda bazı denetimlerin `[GEÇTİ]` görünmesi normaldir (meşru işlemler zaten
 çalışıyordu); açığı gösteren satırlar `[KALDI]` olanlardır.

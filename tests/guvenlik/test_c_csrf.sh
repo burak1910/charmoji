@@ -40,6 +40,13 @@ J=$(sayfa_jetonu "$G")
 H=$(yeni_kavanoz c_hedef)
 kayit_ol "$H" "csrf_hedef" "csrf_hedef@test.local" "Sifre123!"
 H_ID=$(kullanici_id csrf_hedef@test.local)
+# Resmi şemada çift başına tek Arkadasliklar kaydı vardır (UQ_Ark_Cift): her fikstür farklı kişiyle kurulur.
+H2=$(yeni_kavanoz c_hedef2); kayit_ol "$H2" "csrf_hedef2" "csrf_hedef2@test.local" "Sifre123!"
+H2_ID=$(kullanici_id csrf_hedef2@test.local)
+H3=$(yeni_kavanoz c_hedef3); kayit_ol "$H3" "csrf_hedef3" "csrf_hedef3@test.local" "Sifre123!"
+H3_ID=$(kullanici_id csrf_hedef3@test.local)
+# Satın alma sınaması için kullanıcıya bakiye ver (seed'de eşya fiyatları 100-500 altın)
+sql "UPDATE Kullanicilar SET Bakiye = 1000 WHERE KullaniciID = $U_ID"
 
 # uc_dene ADI DURUM_SORGUSU ISTEK_FONKSIYONU
 # İstek fonksiyonu: $1 = jeton ("" ise gönderilmez)
@@ -68,10 +75,10 @@ ajax_post() { # jeton veri...
 # --- friend_action.php
 f_istek()   { form_post "$1" "${BASE}service/friend_action.php" -d "action=send_request" -d "target_id=$H_ID"; }
 uc_dene "friend_action (istek gönder)" "SELECT COUNT(*) FROM Arkadasliklar WHERE IstekGonderenID=$U_ID" f_istek
-GELEN=$(sql "INSERT INTO Arkadasliklar (IstekGonderenID, IstekAlanID, Durum) VALUES ($H_ID, $U_ID, 0); SELECT LAST_INSERT_ID();")
+GELEN=$(sql "INSERT INTO Arkadasliklar (IstekGonderenID, IstekAlanID, Durum) VALUES ($H2_ID, $U_ID, 0); SELECT LAST_INSERT_ID();")
 f_kabul()   { form_post "$1" "${BASE}service/friend_action.php" -d "accept_request_id=$GELEN"; }
 uc_dene "friend_action (kabul)" "SELECT Durum FROM Arkadasliklar WHERE ArkadaslikID=$GELEN" f_kabul
-GELEN2=$(sql "INSERT INTO Arkadasliklar (IstekGonderenID, IstekAlanID, Durum) VALUES ($H_ID, $U_ID, 0); SELECT LAST_INSERT_ID();")
+GELEN2=$(sql "INSERT INTO Arkadasliklar (IstekGonderenID, IstekAlanID, Durum) VALUES ($H3_ID, $U_ID, 0); SELECT LAST_INSERT_ID();")
 f_red()     { form_post "$1" "${BASE}service/friend_action.php" -d "reject_request_id=$GELEN2"; }
 uc_dene "friend_action (red)" "SELECT COUNT(*) FROM Arkadasliklar WHERE ArkadaslikID=$GELEN2" f_red
 f_sil()     { form_post "$1" "${BASE}service/friend_action.php" -d "remove_friend_id=$GELEN"; }
