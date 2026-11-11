@@ -7,6 +7,7 @@ define('CHARMOJI_JSON_YANIT', true);
 
 // Oturum ve hata ayarları (display_errors kapalı) auth.php içinde yapılır.
 require_once __DIR__ . '/../service/auth.php';
+require_once __DIR__ . '/avatar_renderer.php'; // Renk doğrulama fonksiyonları
 
 // 1. GÜVENLİK KONTROLÜ
 if (!isset($_SESSION['user_id'])) {
@@ -24,7 +25,29 @@ $bugun = date('Y-m-d');
 
 // A1. Avatar Renklerini Kaydetme
 if (isset($_POST['save_avatar_colors'])) {
-    $colors = $_POST['colors']; // JSON string olarak gelir
+    // JSON metni olarak gelir; yalnızca izinli anahtarlar ve #RRGGBB değerler kabul edilir.
+    $ham = $_POST['colors'] ?? '';
+    $gelen = (is_string($ham) && strlen($ham) <= 1000) ? json_decode($ham, true) : null;
+
+    $temiz = [];
+    $gecerli = is_array($gelen) && $gelen !== [];
+    if ($gecerli) {
+        foreach ($gelen as $anahtar => $renk) {
+            if (!array_key_exists($anahtar, AVATAR_VARSAYILAN_RENKLER) || !avatar_renk_gecerli_mi($renk)) {
+                $gecerli = false;
+                break;
+            }
+            $temiz[$anahtar] = $renk;
+        }
+    }
+    if (!$gecerli) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Geçersiz renk verisi. Renkler #RRGGBB biçiminde olmalı.']);
+        exit();
+    }
+
+    // Eksik anahtarlar varsayılanla tamamlanır; veritabanına yalnızca doğrulanmış veri yazılır.
+    $colors = json_encode(array_merge(AVATAR_VARSAYILAN_RENKLER, $temiz));
     $stmt = $conn->prepare("UPDATE Kullanicilar SET AvatarVerisi = ? WHERE KullaniciID = ?");
     $stmt->bind_param("si", $colors, $kullaniciID);
     

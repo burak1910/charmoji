@@ -2,20 +2,73 @@
 // view/avatar_renderer.php
 // Modern "Flat Art" Tasarımı + Eşya Desteği
 
-function renderAvatar($avatarJson, $size = '100%', $equippedItems = []) {
-    // Varsayılan Renkler
-    $data = [
-        'skinColor' => '#F3D2C1',
-        'hairColor' => '#2D3436', 
-        'eyeColor' => '#000000',
-        'topColor' => '#6C5CE7'
-    ];
+// İzinli avatar renk anahtarları ve varsayılan değerleri.
+// Kayıt (ajax_islem.php) ve çizim aynı listeyi kullanır.
+const AVATAR_VARSAYILAN_RENKLER = [
+    'skinColor' => '#F3D2C1',
+    'hairColor' => '#2D3436',
+    'eyeColor'  => '#000000',
+    'topColor'  => '#6C5CE7',
+];
 
-    if (!empty($avatarJson)) {
-        $decoded = json_decode($avatarJson, true);
-        if (is_array($decoded)) {
-            $data = array_merge($data, $decoded);
+/**
+ * Değer tam olarak #RRGGBB biçiminde mi? (\z: sondaki satır sonu da reddedilir)
+ */
+function avatar_renk_gecerli_mi($renk): bool
+{
+    return is_string($renk) && preg_match('/^#[0-9A-Fa-f]{6}\z/', $renk) === 1;
+}
+
+/**
+ * Veritabanından gelen AvatarVerisi'ni (JSON metni ya da dizi) güvenli bir
+ * renk dizisine çevirir: yalnızca izinli anahtarlar, yalnızca #RRGGBB değerler.
+ * Geçersiz ya da eksik her değer varsayılan renge düşer.
+ */
+function avatar_renklerini_temizle($avatarVerisi): array
+{
+    $renkler = AVATAR_VARSAYILAN_RENKLER;
+
+    $cozulmus = is_array($avatarVerisi) ? $avatarVerisi : null;
+    if ($cozulmus === null && is_string($avatarVerisi) && $avatarVerisi !== '') {
+        $cozulmus = json_decode($avatarVerisi, true);
+    }
+    if (!is_array($cozulmus)) {
+        return $renkler;
+    }
+
+    foreach (array_keys(AVATAR_VARSAYILAN_RENKLER) as $anahtar) {
+        if (isset($cozulmus[$anahtar]) && avatar_renk_gecerli_mi($cozulmus[$anahtar])) {
+            $renkler[$anahtar] = $cozulmus[$anahtar];
         }
+    }
+    return $renkler;
+}
+
+/**
+ * SVG width/height için güvenli boyut: sayı + isteğe bağlı birim (px, %, em, rem).
+ * Geçersiz değer '100%' olur.
+ */
+function avatar_boyut_temizle($boyut): string
+{
+    if (is_int($boyut) || is_float($boyut)) {
+        $boyut = (string) $boyut;
+    }
+    if (is_string($boyut) && preg_match('/^\d{1,4}(\.\d{1,2})?(px|%|em|rem)?\z/', $boyut) === 1) {
+        return $boyut;
+    }
+    return '100%';
+}
+
+function renderAvatar($avatarJson, $size = '100%', $equippedItems = []) {
+    // Renkler yeniden doğrulanır: veritabanında eskiden kalmış kötü veri
+    // varsayılan renge düşer; yine de her değer çıktıda kaçışlanır.
+    $data = array_map(
+        fn($renk) => htmlspecialchars($renk, ENT_QUOTES, 'UTF-8'),
+        avatar_renklerini_temizle($avatarJson)
+    );
+    $size = htmlspecialchars(avatar_boyut_temizle($size), ENT_QUOTES, 'UTF-8');
+    if (!is_array($equippedItems)) {
+        $equippedItems = [];
     }
 
     // --- EŞYA ÇİZİM MANTIĞI (PHP) ---
@@ -24,8 +77,9 @@ function renderAvatar($avatarJson, $size = '100%', $equippedItems = []) {
     $neckSVG = '';
 
     foreach ($equippedItems as $item) {
-        $name = $item['Ad'];
-        $type = $item['EsyaTuru'];
+        // Ad/tür yalnızca sabit metinlerle karşılaştırılır, çıktıya basılmaz.
+        $name = $item['Ad'] ?? '';
+        $type = $item['EsyaTuru'] ?? '';
 
         // Şapka Grubu
         if ($type === 'Şapka') {

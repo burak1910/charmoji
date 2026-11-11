@@ -12,19 +12,13 @@ $conn = get_db_connection();
 $userQuery = $conn->query("SELECT AvatarVerisi FROM Kullanicilar WHERE KullaniciID = $kullaniciID");
 $user = $userQuery->fetch_assoc();
 
-$avatarData = [
-    'hairColor' => '#2D3436',
-    'skinColor' => '#F3D2C1',
-    'eyeColor' => '#000000',
-    'topColor' => '#6C5CE7'
-];
-
-if ($user && !empty($user['AvatarVerisi'])) {
-    $decoded = json_decode($user['AvatarVerisi'], true);
-    if (is_array($decoded)) {
-        $avatarData = array_merge($avatarData, $decoded);
-    }
-}
+// Renkler doğrulanır (izinli anahtar + #RRGGBB); geçersiz değer varsayılana düşer
+// ve HTML'e basılmadan önce kaçışlanır.
+require_once __DIR__ . '/avatar_renderer.php';
+$avatarData = array_map(
+    fn($renk) => htmlspecialchars($renk, ENT_QUOTES, 'UTF-8'),
+    avatar_renklerini_temizle($user['AvatarVerisi'] ?? null)
+);
 
 // 2. Envanteri Çek
 $sql = "SELECT KE.EnvanterID, KE.KusandiMi, M.EsyaID, M.Ad, M.GorselURL, M.EsyaTuru 
@@ -188,12 +182,12 @@ $kusanilanlar = array_filter($envanter, function($item) { return $item['KusandiM
                         </div>
                     <?php else: ?>
                         <?php foreach($envanter as $item): ?>
-                            <div onclick="equipItem(<?php echo $item['EsyaID']; ?>, '<?php echo $item['Ad']; ?>', '<?php echo $item['EsyaTuru']; ?>', this)" 
+                            <div onclick="equipItem(<?php echo (int) $item['EsyaID']; ?>, <?php echo htmlspecialchars(json_encode($item['Ad'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>, <?php echo htmlspecialchars(json_encode($item['EsyaTuru'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>, this)"
                                  class="item-card cursor-pointer bg-slate-900 border-2 <?php echo $item['KusandiMi'] ? 'border-primary shadow-lg shadow-orange-900/20' : 'border-slate-800 hover:border-slate-600'; ?> rounded-xl p-4 flex flex-col items-center transition relative overflow-hidden group">
                                 
                                 <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition"></div>
                                 
-                                <i class="fa-solid <?php echo $item['GorselURL']; ?> text-3xl mb-3 text-slate-400 group-hover:text-white <?php echo $item['KusandiMi'] ? 'text-primary' : ''; ?> transition"></i>
+                                <i class="fa-solid <?php echo htmlspecialchars((string) $item['GorselURL'], ENT_QUOTES, 'UTF-8'); ?> text-3xl mb-3 text-slate-400 group-hover:text-white <?php echo $item['KusandiMi'] ? 'text-primary' : ''; ?> transition"></i>
                                 <span class="text-[10px] font-bold text-center text-slate-300 uppercase tracking-wide relative z-10"><?php echo htmlspecialchars($item['Ad']); ?></span>
                                 
                                 <?php if($item['KusandiMi']): ?>
@@ -230,7 +224,7 @@ $kusanilanlar = array_filter($envanter, function($item) { return $item['KusandiM
             fetch('ajax_islem.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: `save_avatar_colors=1&colors=${JSON.stringify(colors)}`
+                body: `save_avatar_colors=1&colors=${encodeURIComponent(JSON.stringify(colors))}`
             })
             .then(res => res.json())
             .then(data => {
@@ -349,8 +343,8 @@ $kusanilanlar = array_filter($envanter, function($item) { return $item['KusandiM
         window.addEventListener('load', function() {
             console.log("Avatar yükleniyor...");
             <?php foreach($kusanilanlar as $kusanilan): ?>
-                console.log("Takılıyor: <?php echo $kusanilan['Ad']; ?>");
-                renderAccessory("<?php echo $kusanilan['Ad']; ?>", "<?php echo $kusanilan['EsyaTuru']; ?>");
+                console.log("Takılıyor:", <?php echo json_encode($kusanilan['Ad'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>);
+                renderAccessory(<?php echo json_encode($kusanilan['Ad'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>, <?php echo json_encode($kusanilan['EsyaTuru'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>);
             <?php endforeach; ?>
         });
     </script>

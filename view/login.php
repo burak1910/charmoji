@@ -122,14 +122,14 @@ if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
             <?php if(isset($_SESSION['error'])): ?>
                 <div class="mb-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 flex items-center gap-3 text-red-700 dark:text-red-300 text-sm">
                     <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0"></i>
-                    <span><?= $_SESSION['error']; unset($_SESSION['error']); ?></span>
+                    <span><?= htmlspecialchars((string) $_SESSION['error'], ENT_QUOTES, 'UTF-8'); unset($_SESSION['error']); ?></span>
                 </div>
             <?php endif; ?>
 
             <?php if(isset($_SESSION['success'])): ?>
                 <div class="mb-4 p-4 rounded-lg bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 flex items-center gap-3 text-green-700 dark:text-green-300 text-sm">
                     <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0"></i>
-                    <span><?= $_SESSION['success']; unset($_SESSION['success']); ?></span>
+                    <span><?= htmlspecialchars((string) $_SESSION['success'], ENT_QUOTES, 'UTF-8'); unset($_SESSION['success']); ?></span>
                 </div>
             <?php endif; ?>
 
