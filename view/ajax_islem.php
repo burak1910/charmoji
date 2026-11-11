@@ -92,8 +92,10 @@ if (isset($_POST['equip_item_id'])) {
     try {
         $conn->begin_transaction();
 
-        // 1. Eşyanın türünü bul (Şapka mı, Gözlük mü?)
-        $turSql = sorgu($conn, "SELECT EsyaTuru FROM MarketEsyalari WHERE EsyaID = ?", "i", [$esyaID])
+        // 1. Eşyanın türünü bul (Şapka mı, Gözlük mü?) - eşya kullanıcının envanterinde olmalı
+        $turSql = sorgu($conn, "SELECT ME.EsyaTuru FROM MarketEsyalari ME
+                                JOIN KullaniciEnvanteri KE ON KE.EsyaID = ME.EsyaID
+                                WHERE ME.EsyaID = ? AND KE.KullaniciID = ?", "ii", [$esyaID, $kullaniciID])
             ->get_result()->fetch_assoc();
         if(!$turSql) throw new KullaniciHatasi("Eşya bulunamadı.");
         $tur = $turSql['EsyaTuru'];
@@ -203,8 +205,12 @@ if (isset($_POST['claim_quest_id'])) {
 if (isset($_POST['is_delete']) && $_POST['is_delete'] == 1) {
     $ka_id = intval($_POST['ka_id'] ?? 0);
     try {
-        sorgu($conn, "DELETE FROM KullaniciAliskanliklari WHERE KullaniciAliskanlikID = ? AND KullaniciID = ?",
+        $silme = sorgu($conn, "DELETE FROM KullaniciAliskanliklari WHERE KullaniciAliskanlikID = ? AND KullaniciID = ?",
             "ii", [$ka_id, $kullaniciID]);
+        if ($silme->affected_rows < 1) {
+            echo json_encode(['success' => false, 'message' => 'Alışkanlık bulunamadı.']);
+            exit();
+        }
         echo json_encode(['success' => true]);
     } catch (Throwable $e) {
         ajax_hata_mesaji($e); // log'a yaz
