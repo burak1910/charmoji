@@ -41,7 +41,7 @@ class FriendManager {
         
         // Mantık: Ben değilsem VE Arkadaş tablosunda (kabul veya beklemede) kaydımız yoksa getir.
         $sql = "
-            SELECT k.KullaniciID, k.Ad, k.Eposta, 
+            SELECT k.KullaniciID, k.Ad, k.AvatarVerisi,
                    (SELECT COALESCE(SUM(ToplamPuan),0) FROM KullaniciStatlari WHERE KullaniciID = k.KullaniciID) as ToplamXP
             FROM Kullanicilar k
             WHERE k.KullaniciID != ?
@@ -95,10 +95,11 @@ class FriendManager {
     public static function getPendingRequests($myID) {
         $conn = get_db_connection();
         // DÜZELTME: Durum = 0 (Bekleyenler)
-        $sql = "SELECT ArkadaslikID as IstekID, K.Ad, K.Eposta 
+        $sql = "SELECT ArkadaslikID as IstekID, K.KullaniciID, K.Ad, K.AvatarVerisi
                 FROM Arkadasliklar A 
                 JOIN Kullanicilar K ON A.IstekGonderenID = K.KullaniciID 
-                WHERE A.IstekAlanID = ? AND A.Durum = 0";
+                WHERE A.IstekAlanID = ? AND A.Durum = 0
+                ORDER BY A.ArkadaslikID";
         
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("i", $myID);
@@ -110,7 +111,7 @@ class FriendManager {
     public static function getFriends($myID) {
         $conn = get_db_connection();
         // DÜZELTME: Durum = 1 (Kabul Edilenler)
-        $sql = "SELECT K.Ad, K.Eposta, ArkadaslikID as ArkadaslikID
+        $sql = "SELECT K.KullaniciID, K.Ad, K.AvatarVerisi, ArkadaslikID as ArkadaslikID
                 FROM Arkadasliklar A
                 JOIN Kullanicilar K ON 
                     (CASE 
@@ -118,7 +119,8 @@ class FriendManager {
                         WHEN A.IstekAlanID = ? THEN A.IstekGonderenID = K.KullaniciID
                      END)
                 WHERE (A.IstekGonderenID = ? OR A.IstekAlanID = ?) 
-                  AND A.Durum = 1";
+                  AND A.Durum = 1
+                ORDER BY K.Ad";
 
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("iiii", $myID, $myID, $myID, $myID);
@@ -126,6 +128,19 @@ class FriendManager {
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
     
+    // 5b. Benim gönderdiğim, bekleyen istekler
+    public static function getSentRequests($myID) {
+        $conn = get_db_connection();
+        $stmt = $conn->prepare("SELECT A.ArkadaslikID AS IstekID, K.KullaniciID, K.Ad, K.AvatarVerisi
+                                FROM Arkadasliklar A
+                                JOIN Kullanicilar K ON A.IstekAlanID = K.KullaniciID
+                                WHERE A.IstekGonderenID = ? AND A.Durum = 0
+                                ORDER BY A.ArkadaslikID");
+        $stmt->bind_param("i", $myID);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
     // 6. Kullanıcı Ara
     public static function searchUsers($keyword, $myID) {
         $conn = get_db_connection();
@@ -139,7 +154,7 @@ class FriendManager {
         ";
 
         if (empty($keyword)) {
-            $sql = "SELECT k.KullaniciID, k.Ad, k.Eposta 
+            $sql = "SELECT k.KullaniciID, k.Ad
                     FROM Kullanicilar k 
                     WHERE k.KullaniciID != ? 
                     $excludeCondition 
@@ -149,16 +164,20 @@ class FriendManager {
             $stmt->bind_param("iii", $myID, $myID, $myID);
 
         } else {
-            $term = "%" . $keyword . "%";
-            $sql = "SELECT k.KullaniciID, k.Ad, k.Eposta 
+            // Yalnızca kahraman adıyla, "içerir" eşleşmesi (UX 05 §6, S13). E-postayla arama
+            // yapılmaz (e-posta adresi tahmin edilerek hesap bulunamasın). LIKE joker
+            // karakterleri (% _ \) kullanıcı girdisinde düz karakter sayılır.
+            $term = "%" . addcslashes((string) $keyword, '%_\\') . "%";
+            $sql = "SELECT k.KullaniciID, k.Ad, k.AvatarVerisi
                     FROM Kullanicilar k 
-                    WHERE (k.Ad LIKE ? OR k.Eposta LIKE ?) 
+                    WHERE k.Ad LIKE ?
                     AND k.KullaniciID != ? 
                     $excludeCondition 
+                    ORDER BY k.Ad
                     LIMIT 20";
             
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ssiii", $term, $term, $myID, $myID, $myID);
+            $stmt->bind_param("siii", $term, $myID, $myID, $myID);
         }
         
         $stmt->execute();

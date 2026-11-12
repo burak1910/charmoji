@@ -147,7 +147,7 @@ function handle_login() {
         $_SESSION['fullname'] = $user['fullname'];
         $_SESSION['success'] = "Hoş geldiniz, " . $user['fullname'] . "!";
         
-        header("Location: ../view/userpage.php");
+        header("Location: ../view/karargah.php");
         exit();
     } else {
         $_SESSION['error'] = "E-posta veya şifre hatalı.";
@@ -186,7 +186,7 @@ function handle_register() {
             $_SESSION['fullname'] = $user['fullname'];
             $_SESSION['success'] = "Kayıt başarılı! Hoş geldiniz.";
             
-            header("Location: ../view/userpage.php");
+            header("Location: ../view/karargah.php");
             exit();
         } else {
             $_SESSION['success'] = "Kayıt başarılı. Lütfen giriş yapın.";

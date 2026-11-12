@@ -48,7 +48,7 @@ dogrula "B-3: veritabanındaki ad ters eğik çizgisiz ($OB_AD)" esit "$OB_AD_DB
 dogrula "B-3: veritabanındaki e-posta ters eğik çizgisiz ($OB_EPOSTA)" esit "$OB_EP_DB" "$OB_EPOSTA"
 oturum_acik_mi "$JO"; ACIK=$?
 kanit "kayıt sonrası: $HTTP_SON_URL (HTTP $HTTP_KOD)"
-dogrula "B-3: kayıt sonrası otomatik giriş çalışıyor (userpage.php açık)" esit "$ACIK" "0"
+dogrula "B-3: kayıt sonrası otomatik giriş çalışıyor (ana sayfa açık)" esit "$ACIK" "0"
 JO2=$(yeni_kavanoz j_obrien_elle)
 giris_yap "$JO2" "$OB_EPOSTA" "Sifre123!"
 oturum_acik_mi "$JO2"; ACIK=$?

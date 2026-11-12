@@ -1,7 +1,7 @@
 <?php
 // PHP yerleşik sunucusu için yönlendirici betik.
 // Kullanım (depo kökünden):  php -S 127.0.0.1:8000 -t . sunucu.php
-// Gizli yolları (.env, .git, config/, database/, tests/, docs/ ...) 404 ile kapatır;
+// Gizli yolları (.env, .git, config/, database/, tests/, docs/, view/ortak/ ...) 404 ile kapatır;
 // diğer her isteği olağan biçimde sunar. Apache için eşdeğeri: .htaccess
 
 $yol = rawurldecode((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));
@@ -15,6 +15,9 @@ foreach ($parcalar as $i => $parca) {
     if ($kucuk[0] === '.'                                   // .env, .git, .htaccess ...
         || in_array($kucuk, ['config', 'database', 'tests', 'docs', 'sunucu.php'], true)
         || ($kucuk === 'araclar' && $i > 0 && strtolower($parcalar[$i - 1]) === 'assets')
+        // Ortak sayfa parçaları (view/ortak/*.php) yalnızca include edilir, doğrudan çağrılmaz.
+        // Statik dosyalar (view/statik/*.css, *.js) bu kurala girmez, olağan biçimde sunulur.
+        || ($kucuk === 'ortak' && $i > 0 && strtolower($parcalar[$i - 1]) === 'view')
         || preg_match('/\.(sql|md|sh|log|env)$/', $kucuk)
         || strpos($kucuk, "\0") !== false) {
         $yasak = true;

@@ -1,5 +1,5 @@
 # tests/guvenlik/test_k_cikti.sh  (calistir.sh tarafından source edilir)
-# k) B-2: günlük görev Baslik/Ikon değerleri (GorevTanimlari) userpage'de kaçışlanır.
+# k) B-2: günlük görev (meydan okuma) Baslik/Ikon değerleri (GorevTanimlari) listede kaçışlanır.
 
 bolum "k) Depolanan XSS (günlük görev Baslik/Ikon)"
 
@@ -11,11 +11,11 @@ K_TANIM=$(sql "SELECT MAX(GorevTanimID) FROM GorevTanimlari")
 
 K_KAV=$(yeni_kavanoz k_kullanici)
 kayit_ol "$K_KAV" "xss_k" "xss_k@test.local" "Sifre123!"
-istek "$K_KAV" "${BASE}view/userpage.php" -L
+istek "$K_KAV" "${BASE}${GOREV_YOLU}" -L
 K_SAYFA="$HTTP_GOVDE"
-dogrula "B-2: userpage ham '<img src=x onerror' içermiyor" icermez "$K_SAYFA" "<img src=x onerror"
-dogrula "B-2: userpage Baslik'i kaçışlı gösteriyor (X&lt;img)" icerir "$K_SAYFA" "X&lt;img src=x"
-dogrula "B-2: userpage Ikon'u kaçışlı gösteriyor (fa-x&quot;&gt;)" icerir "$K_SAYFA" "fa-x&quot;&gt;"
+dogrula "B-2: $GOREV_YOLU ham '<img src=x onerror' içermiyor" icermez "$K_SAYFA" "<img src=x onerror"
+dogrula "B-2: $GOREV_YOLU Baslik'i kaçışlı gösteriyor (X&lt;img)" icerir "$K_SAYFA" "X&lt;img src=x"
+dogrula "B-2: $GOREV_YOLU Ikon'u kaçışlı gösteriyor (fa-x&quot;&gt;)" icerir "$K_SAYFA" "fa-x&quot;&gt;"
 
 if [[ "$PLAYWRIGHT" == "1" ]] && command -v node >/dev/null; then
     PW=$(node "$TEST_DIZINI/xss_tarayici.js" "$BASE" "$LOGIN_YOLU" "xss_k@test.local" "Sifre123!" 2>&1)

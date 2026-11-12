@@ -1,5 +1,5 @@
 # tests/guvenlik/test_h_duman.sh  (calistir.sh tarafından source edilir)
-# h) Uçtan uca duman testi: kayıt -> giriş -> alışkanlık ekle -> işaretle -> çıkış,
+# h) Uçtan uca duman testi: kayıt -> giriş -> görev ekle -> işaretle -> sekmeler -> çıkış,
 #    uygulama hem kökten hem /charmoji/ alt dizininden servis edilirken.
 
 duman_testi() {
@@ -25,10 +25,10 @@ duman_testi() {
     istek "$k" "${kok}view/login.php"
     dogrula "view/login.php açılıyor (HTTP $HTTP_KOD)" esit "$HTTP_KOD" "200"
 
-    # Kayıt -> userpage
+    # Kayıt -> ana sayfa
     kayit_ol "$k" "duman_$etiket" "$eposta" "Sifre123!" "$kok"
     kanit "kayıt sonrası: $HTTP_SON_URL (HTTP $HTTP_KOD)"
-    dogrula "kayıt sonrası view/userpage.php açılıyor" bash -c '[[ "$0" == "200" && "$1" == "$2view/userpage.php" ]]' "$HTTP_KOD" "$HTTP_SON_URL" "$kok"
+    dogrula "kayıt sonrası $ANA_YOLU açılıyor" bash -c '[[ "$0" == "200" && "$1" == "$2$3" ]]' "$HTTP_KOD" "$HTTP_SON_URL" "$kok" "$ANA_YOLU"
 
     # Çıkış -> index
     j=$(sayfa_jetonu "$k" "$kok")
@@ -43,14 +43,20 @@ duman_testi() {
     dogrula "hatalı giriş view/login.php'ye döner ve mesaj gösterir" \
         bash -c '[[ "$0" == "200" && "$1" == "$2view/login.php" && "$3" == *"hatalı"* ]]' "$HTTP_KOD" "$HTTP_SON_URL" "$kok" "$HTTP_GOVDE"
 
-    # Giriş -> userpage
+    # Giriş -> ana sayfa
     giris_yap "$k" "$eposta" "Sifre123!" "$kok"
     kanit "giriş sonrası: $HTTP_SON_URL (HTTP $HTTP_KOD)"
-    dogrula "giriş sonrası view/userpage.php açılıyor" bash -c '[[ "$0" == "200" && "$1" == "$2view/userpage.php" ]]' "$HTTP_KOD" "$HTTP_SON_URL" "$kok"
+    dogrula "giriş sonrası $ANA_YOLU açılıyor" bash -c '[[ "$0" == "200" && "$1" == "$2$3" ]]' "$HTTP_KOD" "$HTTP_SON_URL" "$kok" "$ANA_YOLU"
 
-    # Alışkanlık ekle
+    # Eski adres kırılmadı: oturum açıkken userpage.php ana sayfaya (Karargah) yönlenir
+    if [[ "$MOD" == "yeni" ]]; then
+        istek "$k" "${kok}view/userpage.php" -L
+        dogrula "eski adres view/userpage.php -> $ANA_YOLU yönleniyor" bash -c '[[ "$0" == "200" && "$1" == "$2$3" ]]' "$HTTP_KOD" "$HTTP_SON_URL" "$kok" "$ANA_YOLU"
+    fi
+
+    # Görev (alışkanlık) ekle
     j=$(sayfa_jetonu "$k" "$kok")
-    istek "$k" "${kok}view/userpage.php" -L -d "add_habit_btn=1" -d "habit_name=duman_$etiket" -d "habit_stat=Zeka" -d "csrf_token=$j"
+    istek "$k" "${kok}${GOREV_YOLU}" -L -d "add_habit_btn=1" -d "habit_name=duman_$etiket" -d "habit_stat=Zeka" -d "csrf_token=$j"
     ka=$(sql "SELECT KA.KullaniciAliskanlikID FROM KullaniciAliskanliklari KA JOIN Kullanicilar K ON K.KullaniciID=KA.KullaniciID WHERE K.Eposta='$eposta' LIMIT 1")
     dogrula "alışkanlık eklendi ve sayfada görünüyor" bash -c '[[ -n "$0" && "$1" == *"duman_$2"* ]]' "$ka" "$HTTP_GOVDE" "$etiket"
 
@@ -61,18 +67,24 @@ duman_testi() {
         bash -c '[[ "$0" == *"\"success\":true"* && "$1" -gt 0 ]]' "$HTTP_GOVDE" \
         "$(sql "SELECT COALESCE(SUM(S.ToplamPuan),0) FROM KullaniciStatlari S JOIN Kullanicilar K ON K.KullaniciID=S.KullaniciID WHERE K.Eposta='$eposta' AND S.StatTuru='Zeka'")"
 
-    # Market ve avatar sayfaları açılıyor
-    istek "$k" "${kok}view/market.php"
-    dogrula "view/market.php açılıyor (HTTP $HTTP_KOD)" esit "$HTTP_KOD" "200"
-    istek "$k" "${kok}view/avatar.php"
-    dogrula "view/avatar.php açılıyor (HTTP $HTTP_KOD)" esit "$HTTP_KOD" "200"
+    # Market ve avatar sayfaları (yeni kodda beş sekmenin tamamı) açılıyor
+    local s sayfalar="view/market.php view/avatar.php"
+    [[ "$MOD" == "yeni" ]] && sayfalar="view/karargah.php view/gorevler.php view/market.php view/lonca.php view/karakter.php view/avatar.php"
+    for s in $sayfalar; do
+        istek "$k" "${kok}$s"
+        dogrula "$s açılıyor (HTTP $HTTP_KOD)" esit "$HTTP_KOD" "200"
+    done
 
     # Çıkış -> oturum kapalı
     j=$(sayfa_jetonu "$k" "$kok")
     istek "$k" "${kok}service/logout.php" -L -d "csrf_token=$j"
-    istek "$k" "${kok}view/userpage.php" -L
-    kanit "çıkıştan sonra userpage.php -> $HTTP_SON_URL"
-    dogrula "çıkıştan sonra userpage.php view/login.php'ye yönleniyor" bash -c '[[ "$0" == "200" && "$1" == "$2view/login.php" ]]' "$HTTP_KOD" "$HTTP_SON_URL" "$kok"
+    istek "$k" "${kok}${ANA_YOLU}" -L
+    kanit "çıkıştan sonra $ANA_YOLU -> $HTTP_SON_URL"
+    dogrula "çıkıştan sonra $ANA_YOLU view/login.php'ye yönleniyor" bash -c '[[ "$0" == "200" && "$1" == "$2view/login.php" ]]' "$HTTP_KOD" "$HTTP_SON_URL" "$kok"
+    if [[ "$MOD" == "yeni" ]]; then
+        istek "$k" "${kok}view/userpage.php" -L
+        dogrula "çıkıştan sonra eski adres view/userpage.php de view/login.php'ye yönleniyor" bash -c '[[ "$0" == "200" && "$1" == "$2view/login.php" ]]' "$HTTP_KOD" "$HTTP_SON_URL" "$kok"
+    fi
 }
 
 duman_testi "$BASE" "kok"
