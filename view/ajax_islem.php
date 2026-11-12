@@ -8,9 +8,12 @@ define('CHARMOJI_JSON_YANIT', true);
 // Oturum ve hata ayarları (display_errors kapalı) auth.php içinde yapılır.
 require_once __DIR__ . '/../service/auth.php';
 require_once __DIR__ . '/avatar_renderer.php'; // Renk doğrulama fonksiyonları
-// Ortak çekirdek: metin(), hesaplaLevelVerileri(). Include anında çıktı, yönlendirme
-// ya da veritabanı işlemi yapmaz (oturum denetimi yalnızca sayfa_baslat() içindedir).
+// Ortak çekirdek: metin(), hesaplaLevelVerileri(), KullaniciHatasi. Include anında çıktı,
+// yönlendirme ya da veritabanı işlemi yapmaz (oturum denetimi yalnızca sayfa_baslat() içindedir).
 require_once __DIR__ . '/ortak/cekirdek.php';
+// Görev iş kuralları ve görev kartı (yanıtta güncel kart HTML'i döner).
+require_once __DIR__ . '/ortak/gorev_islemleri.php';
+require_once __DIR__ . '/ortak/gorev_karti.php';
 
 // 1. GÜVENLİK KONTROLÜ
 if (!isset($_SESSION['user_id'])) {
@@ -27,20 +30,12 @@ csrf_dogrula();
 
 $kullaniciID = (int) $_SESSION['user_id'];
 $conn = get_db_connection();
-$bugun = date('Y-m-d');
+$bugun = oyun_bugun();
+$dun = oyun_dun();
 
-// Kullanıcıya gösterilebilecek (iş kuralı) hatalar. Bunların dışındaki her
-// istisna (ör. mysqli_sql_exception) log'a yazılır, kullanıcıya genel mesaj döner.
-// $kod: arayüzün metni seçtiği makine okunur gerekçe (ör. 'yetersiz_altin').
-class KullaniciHatasi extends Exception {
-    public string $kod;
-    public array $ek;
-    public function __construct(string $mesaj, string $kod = '', array $ek = []) {
-        parent::__construct($mesaj);
-        $this->kod = $kod;
-        $this->ek = $ek;
-    }
-}
+// Kullanıcıya gösterilebilecek (iş kuralı) hatalar KullaniciHatasi'dır (cekirdek.php).
+// Bunların dışındaki her istisna (ör. mysqli_sql_exception) log'a yazılır, kullanıcıya
+// genel mesaj döner. $kod: arayüzün metni seçtiği makine okunur gerekçe (ör. 'yetersiz_altin').
 
 // Başarısız işlem yanıtı: mesaj + (kullanıcı hatasıysa) kod ve ek alanlar.
 function ajax_hata_yaniti(Throwable $e): array {
@@ -240,140 +235,142 @@ if (isset($_POST['claim_quest_id'])) {
 }
 
 // ---------------------------------------------------------
-// D. ALIŞKANLIK YÖNETİMİ (SİLME)
+// D. GÖREVLER (docs/ux/03-gorevler.md; kurallar view/ortak/gorev_islemleri.php)
 // ---------------------------------------------------------
 
-if (isset($_POST['is_delete']) && $_POST['is_delete'] == 1) {
-    $ka_id = intval($_POST['ka_id'] ?? 0);
+/** POST'tan pozitif tam sayı (dizi ya da metin gelirse 0). */
+function post_kimlik(string $ad): int {
+    $deger = $_POST[$ad] ?? null;
+    return (is_string($deger) && ctype_digit($deger)) ? (int) $deger : 0;
+}
+
+/** Görevin güncel kartı (yanıt için): kart verisi + sunucuda çizilmiş HTML. */
+function gorev_karti_yaniti(mysqli $conn, int $kullaniciID, int $kaID, string $bugun, string $dun): array {
+    $g = gorev_satiri($conn, $kullaniciID, $kaID, $bugun, null);
+    if ($g === null) {
+        return [];
+    }
+    $kart = gorev_kart_verisi($g, $bugun, $dun);
+    // Karargah (E10) kartında menü yoktur; Görevler (E20) kartında vardır.
+    $menu = ($_POST['kart_tipi'] ?? '') !== 'karargah';
+    return ['kart' => $kart, 'kart_html' => gorev_karti_html($kart, $menu)];
+}
+
+/** Aktif görev sayısı ve sınır (arayüz "Görev ekle" kilidini buna göre gösterir). */
+function gorev_sayilari(mysqli $conn, int $kullaniciID, string $bugun): array {
+    $s = vt_satir($conn, "SELECT COUNT(*) AS Toplam, COUNT(TK.KayitID) AS Tamamlanan
+                            FROM KullaniciAliskanliklari KA
+                            LEFT JOIN TakipKayitlari TK ON TK.KullaniciAliskanlikID = KA.KullaniciAliskanlikID AND TK.Tarih = ?
+                           WHERE KA.KullaniciID = ? AND KA.AktifMi = 1", "si", [$bugun, $kullaniciID]);
+    return ['toplam' => (int) $s['Toplam'], 'tamamlanan' => (int) $s['Tamamlanan'], 'sinir' => GOREV_SINIRI];
+}
+
+// D1. Görev ekle (E21 ekle kipi)
+if (isset($_POST['gorev_ekle'])) {
     try {
-        $silme = sorgu($conn, "DELETE FROM KullaniciAliskanliklari WHERE KullaniciAliskanlikID = ? AND KullaniciID = ?",
-            "ii", [$ka_id, $kullaniciID]);
-        if ($silme->affected_rows < 1) {
-            echo json_encode(['success' => false, 'kod' => 'bulunamadi', 'message' => metin('gorevler.hata_silinemedi')]);
-            exit();
-        }
-        echo json_encode(['success' => true]);
+        $kaID = gorev_ekle($conn, $kullaniciID, $_POST['habit_name'] ?? null, $_POST['habit_stat'] ?? null, $bugun);
+        echo json_encode(['success' => true, 'message' => metin('gorevler.eklendi_bildirim')]
+            + gorev_karti_yaniti($conn, $kullaniciID, $kaID, $bugun, $dun) + gorev_sayilari($conn, $kullaniciID, $bugun));
     } catch (Throwable $e) {
-        ajax_hata_mesaji($e); // log'a yaz
-        echo json_encode(['success' => false, 'message' => metin('gorevler.hata_silinemedi')]);
+        echo json_encode(ajax_hata_yaniti($e));
+    }
+    exit();
+}
+
+// D2. Görev düzenle (E21 düzenle kipi): ad + yetenek
+if (isset($_POST['gorev_duzenle'])) {
+    $kaID = post_kimlik('ka_id');
+    try {
+        gorev_duzenle($conn, $kullaniciID, $kaID, $_POST['habit_name'] ?? null, $_POST['habit_stat'] ?? null, $bugun);
+        echo json_encode(['success' => true, 'message' => metin('gorevler.guncellendi_bildirim')]
+            + gorev_karti_yaniti($conn, $kullaniciID, $kaID, $bugun, $dun));
+    } catch (Throwable $e) {
+        echo json_encode(ajax_hata_yaniti($e));
+    }
+    exit();
+}
+
+// D3. Görev sil = arşivle (S18). Parametre adı eski arayüzle uyumlu: is_delete.
+if (isset($_POST['is_delete']) && $_POST['is_delete'] == 1) {
+    try {
+        gorev_arsivle($conn, $kullaniciID, post_kimlik('ka_id'));
+        echo json_encode(['success' => true, 'message' => metin('gorevler.silindi_bildirim')]
+            + gorev_sayilari($conn, $kullaniciID, $bugun));
+    } catch (Throwable $e) {
+        $yanit = ajax_hata_yaniti($e);
+        if (!($e instanceof KullaniciHatasi)) {
+            $yanit['message'] = metin('gorevler.hata_silinemedi');
+        }
+        echo json_encode($yanit);
+    }
+    exit();
+}
+
+// D4. Silmeyi geri al (5 sn'lik "Geri al" bildirimi)
+if (isset($_POST['gorev_geri_getir'])) {
+    $kaID = post_kimlik('ka_id');
+    try {
+        gorev_geri_getir($conn, $kullaniciID, $kaID, $bugun);
+        echo json_encode(['success' => true, 'message' => metin('gorevler.silme_geri_alindi')]
+            + gorev_karti_yaniti($conn, $kullaniciID, $kaID, $bugun, $dun) + gorev_sayilari($conn, $kullaniciID, $bugun));
+    } catch (Throwable $e) {
+        echo json_encode(ajax_hata_yaniti($e));
     }
     exit();
 }
 
 // ---------------------------------------------------------
-// E. ALIŞKANLIK İŞARETLEME (ANA İŞLEM)
+// E. GÖREV TAMAMLAMA / GERİ ALMA (ANA İŞLEM)
 // ---------------------------------------------------------
 
-// Eğer yukarıdaki özel işlemlerden hiçbiri değilse, bu bir checkbox işaretlemesidir.
 if (!isset($_POST['ka_id']) || !isset($_POST['durum'])) {
     echo json_encode(['success' => false, 'message' => metin('ortak.hata_genel')]);
     exit();
 }
 
-$ka_id = intval($_POST['ka_id']);
-$durum = intval($_POST['durum']);
-$dunkuTarih = date('Y-m-d', strtotime('-1 day'));
+$kaID = post_kimlik('ka_id');
+$tamamla = (string) ($_POST['durum'] ?? '') === '1';
 
 try {
-    $conn->begin_transaction();
-
-    $sql = "SELECT KA.Seri, KA.SonIslemTarihi, A.Puan, A.StatTuru
-            FROM KullaniciAliskanliklari KA
-            JOIN Aliskanliklar A ON KA.AliskanlikID = A.AliskanlikID
-            WHERE KA.KullaniciAliskanlikID = ? AND KA.KullaniciID = ?";
-    $veri = sorgu($conn, $sql, "ii", [$ka_id, $kullaniciID])->get_result()->fetch_assoc();
-
-    if (!$veri) throw new KullaniciHatasi(metin('gorevler.hata_tamamlanamadi'), 'bulunamadi');
-
-    $basePuan = $veri['Puan'];
-    $mevcutSeri = $veri['Seri'];
-    $sonTarih = $veri['SonIslemTarihi'];
-    // StatTuru veritabanından gelir ama kaynağı kullanıcı girdisidir (ikinci
-    // derece enjeksiyon): aşağıdaki sorgulara asla gömülmez, hep bağlanır.
-    $statTuru = (string) $veri['StatTuru'];
-
-    if ($durum === 1) {
-        // --- YAPILDI ---
-        if ($sonTarih == $dunkuTarih) $yeniSeri = $mevcutSeri + 1;
-        elseif ($sonTarih == $bugun) $yeniSeri = $mevcutSeri;
-        else $yeniSeri = 1;
-
-        $carpan = min(2.00, 1 + (floor($yeniSeri / 7) * 0.25));
-        $kazanilanPuan = round($basePuan * $carpan);
-
-        $stmt = sorgu($conn, "INSERT IGNORE INTO TakipKayitlari (KullaniciAliskanlikID, Tarih, TamamlandiMi) VALUES (?, ?, 1)",
-            "is", [$ka_id, $bugun]);
-
-        $degisti = $stmt->affected_rows > 0;
-        $islemXP = (int) $kazanilanPuan;
-        if ($degisti) {
-            sorgu($conn, "UPDATE KullaniciAliskanliklari SET Seri = ?, SonIslemTarihi = ? WHERE KullaniciAliskanlikID = ?",
-                "isi", [$yeniSeri, $bugun, $ka_id]);
-            sorgu($conn, "UPDATE KullaniciStatlari SET ToplamPuan = ToplamPuan + ? WHERE KullaniciID = ? AND StatTuru = ?",
-                "iis", [(int) $kazanilanPuan, $kullaniciID, $statTuru]);
-
-            // Günlük görevi ilerlet
-            sorgu($conn, "UPDATE KullaniciGunlukGorevleri KG JOIN GorevTanimlari GT ON KG.GorevTanimID = GT.GorevTanimID
-                          SET KG.MevcutIlerleme = KG.MevcutIlerleme + 1, KG.TamamlandiMi = CASE WHEN (KG.MevcutIlerleme + 1) >= GT.HedefSayi THEN 1 ELSE 0 END
-                          WHERE KG.KullaniciID = ? AND KG.Tarih = ? AND KG.TamamlandiMi = 0 AND GT.Baslik LIKE '%alışkanlık%'",
-                "is", [$kullaniciID, $bugun]);
-        }
-    } else {
-        // --- GERİ ALINDI ---
-        $carpan = min(2.00, 1 + (floor($mevcutSeri / 7) * 0.25));
-        $silinecekPuan = round($basePuan * $carpan);
-
-        $stmt = sorgu($conn, "DELETE FROM TakipKayitlari WHERE KullaniciAliskanlikID = ? AND Tarih = ?",
-            "is", [$ka_id, $bugun]);
-
-        $degisti = $stmt->affected_rows > 0;
-        $islemXP = (int) $silinecekPuan;
-        if ($degisti) {
-            $yeniSeri = max(0, $mevcutSeri - 1);
-            sorgu($conn, "UPDATE KullaniciAliskanliklari SET Seri = ? WHERE KullaniciAliskanlikID = ?",
-                "ii", [$yeniSeri, $ka_id]);
-            sorgu($conn, "UPDATE KullaniciStatlari SET ToplamPuan = ToplamPuan - ? WHERE KullaniciID = ? AND StatTuru = ?",
-                "iis", [(int) $silinecekPuan, $kullaniciID, $statTuru]);
-        } else {
-            $yeniSeri = $mevcutSeri;
-        }
+    // Sayfa dünden kalmışsa (gün değişti) geçmiş gün değiştirilmez (03 §8.1, S1).
+    $sayfaGunu = $_POST['gun'] ?? null;
+    if (is_string($sayfaGunu) && $sayfaGunu !== '' && $sayfaGunu !== $bugun) {
+        throw new KullaniciHatasi(metin('gorevler.hata_gun_bitti'), 'gun_bitti');
     }
 
-    $conn->commit();
+    $sonuc = $tamamla
+        ? gorev_tamamla($conn, $kullaniciID, $kaID, $bugun, $dun)
+        : gorev_geri_al($conn, $kullaniciID, $kaID, $bugun);
 
-    // Güncel verileri dön
-    $statSatiri = sorgu($conn, "SELECT ToplamPuan FROM KullaniciStatlari WHERE KullaniciID = ? AND StatTuru = ?",
-        "is", [$kullaniciID, $statTuru])->get_result()->fetch_assoc();
-    $yeniToplamPuan = $statSatiri['ToplamPuan'] ?? 0;
-    $statVerisi = hesaplaLevelVerileri($yeniToplamPuan);
-
-    $allStats = sorgu($conn, "SELECT ToplamPuan FROM KullaniciStatlari WHERE KullaniciID = ?", "i", [$kullaniciID])
-        ->get_result();
-    $toplamLevel = 0; $count = 0;
-    while($r = $allStats->fetch_assoc()) {
-        $l = hesaplaLevelVerileri($r['ToplamPuan']);
-        $toplamLevel += $l['level'];
-        $count++;
-    }
-    $genelLevel = ($count > 0) ? floor($toplamLevel / $count) : 1;
+    $yetenek = yetenek_verileri($conn, $kullaniciID);
+    $statVerisi = $yetenek['yetenekler'][$sonuc['stat']] ?? hesaplaLevelVerileri($sonuc['puan_sonra']);
 
     // Alt menü rozeti: bugün alınmamış meydan okuma ödülü kaldı mı?
-    $odulBekliyor = sorgu($conn, "SELECT COUNT(*) AS Sayi FROM KullaniciGunlukGorevleri
-                                  WHERE KullaniciID = ? AND Tarih = ? AND TamamlandiMi = 1 AND OdulAlindiMi = 0",
-        "is", [$kullaniciID, $bugun])->get_result()->fetch_assoc()['Sayi'] > 0;
+    $odulBekliyor = (int) vt_satir($conn, "SELECT COUNT(*) AS Sayi FROM KullaniciGunlukGorevleri
+                                           WHERE KullaniciID = ? AND Tarih = ? AND TamamlandiMi = 1 AND OdulAlindiMi = 0",
+        "is", [$kullaniciID, $bugun])['Sayi'] > 0;
 
     echo json_encode([
         'success' => true,
-        'new_streak' => isset($yeniSeri) ? $yeniSeri : $mevcutSeri,
-        'stat_type' => $statTuru,
+        'degisti' => true,
+        'xp' => $sonuc['xp'],
+        'new_streak' => $sonuc['seri'],
+        'carpan' => $sonuc['carpan'],
+        'carpan_yukseldi' => $sonuc['carpan_yukseldi'],
+        'stat_type' => $sonuc['stat'],
+        'stat_adi' => yetenek_adi($sonuc['stat']),
         'stat_data' => $statVerisi,
-        'global_level' => $genelLevel,
-        'xp' => $islemXP,
-        'degisti' => $degisti,
-        'odul_bekliyor' => $odulBekliyor
-    ]);
-
+        'yetenek_seviye_once' => hesaplaLevelVerileri($sonuc['puan_once'])['level'],
+        'yetenek_seviye_sonra' => hesaplaLevelVerileri($sonuc['puan_sonra'])['level'],
+        'global_level' => $yetenek['seviye'],
+        'meydan' => meydan_durumlari($conn, $kullaniciID, $bugun),
+        'odul_bekliyor' => $odulBekliyor,
+    ] + gorev_karti_yaniti($conn, $kullaniciID, $kaID, $bugun, $dun) + gorev_sayilari($conn, $kullaniciID, $bugun));
 } catch (Throwable $e) {
-    $conn->rollback();
-    echo json_encode(ajax_hata_yaniti($e));
+    $yanit = ajax_hata_yaniti($e);
+    // Zaten tamamlanmış / tamamlanmamış: arayüz kartı sunucudaki güncel hâle çeker.
+    if ($e instanceof KullaniciHatasi && in_array($e->kod, ['zaten_tamamlandi', 'tamamlanmadi'], true)) {
+        $yanit += gorev_karti_yaniti($conn, $kullaniciID, $kaID, $bugun, $dun);
+    }
+    echo json_encode($yanit);
 }

@@ -19,9 +19,8 @@ $esyaAdlari = $esyalar === [] ? 'hiçbiri' : implode(', ', array_column($esyalar
 
 $gorevSayilari = [];
 foreach (vt_satirlar($conn,
-    "SELECT A.StatTuru, COUNT(*) AS Sayi FROM KullaniciAliskanliklari KA
-       JOIN Aliskanliklar A ON KA.AliskanlikID = A.AliskanlikID
-      WHERE KA.KullaniciID = ? AND KA.AktifMi = 1 GROUP BY A.StatTuru", "i", [$kullaniciID]) as $s) {
+    "SELECT KA.StatTuru, COUNT(*) AS Sayi FROM KullaniciAliskanliklari KA
+      WHERE KA.KullaniciID = ? AND KA.AktifMi = 1 GROUP BY KA.StatTuru", "i", [$kullaniciID]) as $s) {
     $gorevSayilari[$s['StatTuru']] = (int) $s['Sayi'];
 }
 

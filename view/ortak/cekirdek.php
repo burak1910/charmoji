@@ -27,6 +27,36 @@ const YETENEKLER = [
     'Yaraticilik' => 'yaraticilik',
 ];
 
+/** Görev kuralları (docs/ux/03-gorevler.md; 09 S10, S17, S18). Sunucu uygular, arayüz yansıtır. */
+const GOREV_SINIRI = 20;            // S10: oyuncu başına aktif görev sınırı
+const GOREV_AD_EN_UZUN = 60;        // S17: görev adı 1–60 karakter
+const GOREV_TABAN_XP = 10;          // 00 §1.4: görev taban ödülü
+// S18: silinen görev 5 sn içinde "Geri al" ile döner. Sunucu, ağ gecikmesi payıyla
+// biraz daha uzun kabul eder; arayüz düğmeyi 5 sn sonra kaldırır.
+const GOREV_GERI_GETIRME_SN = 15;
+
+/** Meydan okuma türleri (GorevTanimlari.Tur, S25). */
+const MEYDAN_TUR_GIRIS = 'giris';
+const MEYDAN_TUR_GOREV = 'gorev_tamamlama';
+
+/**
+ * Kullanıcıya gösterilebilecek iş kuralı hatası. $kod arayüzün metni seçtiği makine
+ * okunur gerekçedir (ör. 'ad_ayni'); $ek yanıta eklenecek alanlardır. Bunun dışındaki
+ * istisnalar log'a yazılır, kullanıcıya genel mesaj döner.
+ */
+class KullaniciHatasi extends Exception
+{
+    public string $kod;
+    public array $ek;
+
+    public function __construct(string $mesaj, string $kod = '', array $ek = [])
+    {
+        parent::__construct($mesaj);
+        $this->kod = $kod;
+        $this->ek = $ek;
+    }
+}
+
 /** Eşya türü (veritabanı) => metin anahtarı soneki. */
 const ESYA_TURLERI = [
     'Şapka'  => 'sapka',
@@ -145,28 +175,46 @@ function hesaplaLevelVerileri($toplamPuan): array
 /** Seri bonusu: 1 + floor(seri / 7) × 0,25, en fazla ×2. */
 function seri_carpani(int $seri): float
 {
-    return min(2.0, 1 + floor($seri / 7) * 0.25);
+    return min(2.0, 1 + floor(max(0, $seri) / 7) * 0.25);
+}
+
+/** Bir seriyle kazanılan XP: round(taban × çarpan) (00 §1.4; PHP round yarımı yukarı yuvarlar). */
+function seri_xp(int $taban, int $seri): int
+{
+    return (int) round($taban * seri_carpani($seri));
 }
 
 /**
- * Bir görevin kartta gösterilecek seri/ödül bilgisi (03 §3.2). Tamamlama XP'si
- * ajax_islem.php ile aynı kuralla (bir sonraki seriyle) hesaplanır.
+ * Etkin seri (03 §3.2): görevin son tamamlandığı gün bugün ya da dün ise kayıtlı
+ * seri; değilse 0 (S12: seri bozulunca sıfırlanır). Tamamlama ve kart AYNI kuralı
+ * kullanır: bugün tamamlanmamış görevde "tamamlanırsa seri" = etkin seri + 1.
+ */
+function etkin_seri(int $seri, ?string $sonTarih, string $bugun, string $dun): int
+{
+    $son = (string) $sonTarih;
+    return ($son === $bugun || $son === $dun) ? max(0, $seri) : 0;
+}
+
+/**
+ * Bir görevin kartta gösterilecek seri/ödül bilgisi (03 §3.2).
+ * $g: KullaniciAliskanlikID, Ad, StatTuru, Puan, Seri, SonIslemTarihi, BugunYapildi,
+ *     BugunXP (bugünkü tamamlamada gerçekte kazanılan XP; yoksa NULL).
  */
 function gorev_kart_verisi(array $g, string $bugun, string $dun): array
 {
     $seri = (int) $g['Seri'];
-    $son = (string) ($g['SonIslemTarihi'] ?? '');
-    $taban = (int) ($g['Puan'] ?? 10);
+    $taban = (int) ($g['Puan'] ?? GOREV_TABAN_XP);
     $tamam = (int) $g['BugunYapildi'] > 0;
+    $etkinSeri = etkin_seri($seri, $g['SonIslemTarihi'] ?? null, $bugun, $dun);
 
-    $etkinSeri = ($son === $bugun || $son === $dun) ? $seri : 0;
     if ($tamam) {
-        $carpan = seri_carpani($seri);
-        $xp = (int) round($taban * $carpan);
+        // Bugün uygulanan çarpan ve gerçekte kazanılan XP.
+        $carpan = seri_carpani($etkinSeri);
+        $xp = isset($g['BugunXP']) ? (int) $g['BugunXP'] : seri_xp($taban, $etkinSeri);
     } else {
-        $sonrakiSeri = $son === $dun ? $seri + 1 : ($son === $bugun ? $seri : 1);
-        $carpan = seri_carpani($sonrakiSeri);
-        $xp = (int) round($taban * $carpan);
+        // Bugün tamamlanırsa: etkin seri + 1 ile.
+        $carpan = seri_carpani($etkinSeri + 1);
+        $xp = seri_xp($taban, $etkinSeri + 1);
     }
     return [
         'id' => (int) $g['KullaniciAliskanlikID'],
@@ -179,6 +227,34 @@ function gorev_kart_verisi(array $g, string $bugun, string $dun): array
         'xp' => $xp,
         'taban' => $taban,
     ];
+}
+
+// ----------------------------------------------------------------
+// Oyun günü (S1; saat dilimi config/uygulama.php CHARMOJI_SAAT_DILIMI)
+// ----------------------------------------------------------------
+
+/** Bugünün tarihi (Y-m-d), oyunun gün sınırına göre. */
+function oyun_bugun(): string
+{
+    return date('Y-m-d');
+}
+
+/** Dünün tarihi (Y-m-d). */
+function oyun_dun(): string
+{
+    return date('Y-m-d', strtotime('-1 day'));
+}
+
+/** Şu an (Y-m-d H:i:s), oyunun saat dilimiyle (ör. ArsivZamani). */
+function oyun_simdi(): string
+{
+    return date('Y-m-d H:i:s');
+}
+
+/** Gün sonuna (bir sonraki 00:00) kalan saniye. */
+function oyun_gun_sonuna_kalan(): int
+{
+    return max(0, strtotime('tomorrow') - time());
 }
 
 // ----------------------------------------------------------------
@@ -208,9 +284,9 @@ function vt_satir(mysqli $conn, string $sql, string $tipler = '', array $degerle
 }
 
 /**
- * Günün meydan okuma satırlarını oluşturur ve "Günlük Giriş"i tamamlar
- * (eskiden userpage.php açılışında yapılıyordu; artık her sekmede, çünkü alt
- * menünün ödül rozeti bu veriye bakar). Tekrar çalıştırılabilir.
+ * Günün meydan okuma satırlarını oluşturur ve "giriş" türündekileri tamamlar
+ * (her sekmede, çünkü alt menünün ödül rozeti bu veriye bakar). Tür başlık
+ * metninden değil GorevTanimlari.Tur'dan okunur (S25). Tekrar çalıştırılabilir.
  */
 function gunluk_meydan_okumalari_hazirla(mysqli $conn, int $kullaniciID, string $bugun): void
 {
@@ -220,11 +296,32 @@ function gunluk_meydan_okumalari_hazirla(mysqli $conn, int $kullaniciID, string 
         // INSERT IGNORE: iki sekme aynı anda açılırsa UQ_KGG çakışması hata vermez.
         vt_sorgu($conn, "INSERT IGNORE INTO KullaniciGunlukGorevleri (KullaniciID, GorevTanimID, Tarih)
                          SELECT ?, GorevTanimID, ? FROM GorevTanimlari", "is", [$kullaniciID, $bugun]);
+        // Satırlar oluşmadan önce (ör. gece yarısından kalan açık sekmeden) tamamlanan
+        // görevler de sayılsın.
+        meydan_ilerlemesini_esitle($conn, $kullaniciID, $bugun);
     }
-    vt_sorgu($conn, "UPDATE KullaniciGunlukGorevleri SET MevcutIlerleme = 1, TamamlandiMi = 1
-                     WHERE KullaniciID = ? AND Tarih = ? AND TamamlandiMi = 0
-                       AND GorevTanimID = (SELECT GorevTanimID FROM GorevTanimlari WHERE Baslik = 'Günlük Giriş' LIMIT 1)",
-        "is", [$kullaniciID, $bugun]);
+    vt_sorgu($conn, "UPDATE KullaniciGunlukGorevleri KG JOIN GorevTanimlari GT ON GT.GorevTanimID = KG.GorevTanimID
+                        SET KG.MevcutIlerleme = GT.HedefSayi, KG.TamamlandiMi = 1
+                      WHERE KG.KullaniciID = ? AND KG.Tarih = ? AND KG.TamamlandiMi = 0 AND GT.Tur = ?",
+        "iss", [$kullaniciID, $bugun, MEYDAN_TUR_GIRIS]);
+}
+
+/**
+ * "Görev tamamlama sayısı" türündeki bugünkü meydan okumaların ilerlemesini, bugün
+ * tamamlanan görev sayısına eşitler (S25: her tamamlama +1, geri alma −1). Ödülü
+ * alınmış meydan okumaya dokunulmaz (S7). Sayım tekrar edilebilir; artırıp azaltmak
+ * yerine eşitlemek, hedefi aşan tamamlamalardan sonra geri almayı da doğru yapar.
+ */
+function meydan_ilerlemesini_esitle(mysqli $conn, int $kullaniciID, string $bugun): void
+{
+    $sayi = (int) (vt_satir($conn,
+        "SELECT COUNT(*) AS Sayi FROM TakipKayitlari TK
+           JOIN KullaniciAliskanliklari KA ON KA.KullaniciAliskanlikID = TK.KullaniciAliskanlikID
+          WHERE KA.KullaniciID = ? AND TK.Tarih = ?", "is", [$kullaniciID, $bugun])['Sayi'] ?? 0);
+    vt_sorgu($conn, "UPDATE KullaniciGunlukGorevleri KG JOIN GorevTanimlari GT ON GT.GorevTanimID = KG.GorevTanimID
+                        SET KG.MevcutIlerleme = ?, KG.TamamlandiMi = IF(? >= GT.HedefSayi, 1, 0)
+                      WHERE KG.KullaniciID = ? AND KG.Tarih = ? AND KG.OdulAlindiMi = 0 AND GT.Tur = ?",
+        "iiiss", [$sayi, $sayi, $kullaniciID, $bugun, MEYDAN_TUR_GOREV]);
 }
 
 /** Bir kullanıcının beş yetenek verisi ve karakter seviyesi. */
@@ -297,19 +394,21 @@ function kusanilan_esyalar(mysqli $conn, int $kullaniciID): array
 }
 
 /**
- * Oyuncunun aktif görevleri (kart verisiyle). Eski ortak tablo (Aliskanliklar) ile
- * okunur: 003 sonrası PHP geçişi (database/README.md) bu aşamanın kapsamı dışında.
+ * Görev satırlarının ortak SELECT'i: ad, yetenek ve puan kullanıcıya özel sütunlardan
+ * (KullaniciAliskanliklari) okunur; eski ortak tablo (Aliskanliklar) kullanılmaz.
  */
+const GOREV_SECIMI = "SELECT KA.KullaniciAliskanlikID, KA.KullaniciID, KA.Ad, KA.StatTuru, KA.Puan, KA.AktifMi,
+                             KA.ArsivZamani, KA.Seri, KA.SonIslemTarihi,
+                             (TK.KayitID IS NOT NULL) AS BugunYapildi, TK.KazanilanXP AS BugunXP
+                        FROM KullaniciAliskanliklari KA
+                        LEFT JOIN TakipKayitlari TK
+                               ON TK.KullaniciAliskanlikID = KA.KullaniciAliskanlikID AND TK.Tarih = ?";
+
+/** Oyuncunun aktif görevleri (kart verisiyle), oluşturulma sırasıyla. */
 function aktif_gorevler(mysqli $conn, int $kullaniciID, string $bugun, string $dun): array
 {
-    $satirlar = vt_satirlar($conn,
-        "SELECT KA.KullaniciAliskanlikID, A.Ad, A.StatTuru, A.Puan, KA.Seri, KA.SonIslemTarihi,
-                (SELECT COUNT(*) FROM TakipKayitlari TK
-                  WHERE TK.KullaniciAliskanlikID = KA.KullaniciAliskanlikID AND TK.Tarih = ?) AS BugunYapildi
-           FROM KullaniciAliskanliklari KA
-           JOIN Aliskanliklar A ON KA.AliskanlikID = A.AliskanlikID
-          WHERE KA.KullaniciID = ? AND KA.AktifMi = 1
-          ORDER BY KA.KullaniciAliskanlikID", "si", [$bugun, $kullaniciID]);
+    $satirlar = vt_satirlar($conn, GOREV_SECIMI . " WHERE KA.KullaniciID = ? AND KA.AktifMi = 1
+                                                   ORDER BY KA.KullaniciAliskanlikID", "si", [$bugun, $kullaniciID]);
     return array_map(fn($g) => gorev_kart_verisi($g, $bugun, $dun), $satirlar);
 }
 
@@ -329,8 +428,8 @@ function sayfa_baslat(): array
     }
     $kullaniciID = (int) $_SESSION['user_id'];
     $conn = get_db_connection();
-    $bugun = date('Y-m-d');
-    $dun = date('Y-m-d', strtotime('-1 day'));
+    $bugun = oyun_bugun();
+    $dun = oyun_dun();
 
     $kullanici = vt_satir($conn, "SELECT Ad, Eposta, Bakiye, AvatarVerisi FROM Kullanicilar WHERE KullaniciID = ?",
         "i", [$kullaniciID]);

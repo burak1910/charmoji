@@ -12,6 +12,16 @@ define('CHARMOJI_KOK', dirname(__DIR__));
 require_once __DIR__ . '/env.php';
 
 // ----------------------------------------------------------------
+// 0. Oyun günü (docs/ux/09 VARSAYIM S1): gün 00:00'da biter, Europe/Istanbul,
+//    sunucu saati esas. Seri, geri alma, meydan okumalar ve sandık bu sınırı
+//    kullanır. Tarih hesaplayan her kod PHP date() ile bu saat dilimini kullanır;
+//    SQL'de CURDATE()/NOW() kullanılmaz (veritabanı saat dilimi farklı olabilir).
+//    Günün kendisi view/ortak/cekirdek.php oyun_bugun() / oyun_dun() ile okunur.
+// ----------------------------------------------------------------
+const CHARMOJI_SAAT_DILIMI = 'Europe/Istanbul';
+date_default_timezone_set(CHARMOJI_SAAT_DILIMI);
+
+// ----------------------------------------------------------------
 // 1. Hata gösterimi: kullanıcıya asla PHP/SQL hata metni gösterme, logla.
 // ----------------------------------------------------------------
 error_reporting(E_ALL);
