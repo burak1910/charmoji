@@ -41,7 +41,7 @@ class FriendManager {
         
         // Mantık: Ben değilsem VE Arkadaş tablosunda (kabul veya beklemede) kaydımız yoksa getir.
         $sql = "
-            SELECT k.KullaniciID, k.Ad, k.Eposta, k.AvatarVerisi,
+            SELECT k.KullaniciID, k.Ad, k.AvatarVerisi,
                    (SELECT COALESCE(SUM(ToplamPuan),0) FROM KullaniciStatlari WHERE KullaniciID = k.KullaniciID) as ToplamXP
             FROM Kullanicilar k
             WHERE k.KullaniciID != ?
@@ -95,7 +95,7 @@ class FriendManager {
     public static function getPendingRequests($myID) {
         $conn = get_db_connection();
         // DÜZELTME: Durum = 0 (Bekleyenler)
-        $sql = "SELECT ArkadaslikID as IstekID, K.KullaniciID, K.Ad, K.Eposta, K.AvatarVerisi
+        $sql = "SELECT ArkadaslikID as IstekID, K.KullaniciID, K.Ad, K.AvatarVerisi
                 FROM Arkadasliklar A 
                 JOIN Kullanicilar K ON A.IstekGonderenID = K.KullaniciID 
                 WHERE A.IstekAlanID = ? AND A.Durum = 0
@@ -111,7 +111,7 @@ class FriendManager {
     public static function getFriends($myID) {
         $conn = get_db_connection();
         // DÜZELTME: Durum = 1 (Kabul Edilenler)
-        $sql = "SELECT K.KullaniciID, K.Ad, K.Eposta, K.AvatarVerisi, ArkadaslikID as ArkadaslikID
+        $sql = "SELECT K.KullaniciID, K.Ad, K.AvatarVerisi, ArkadaslikID as ArkadaslikID
                 FROM Arkadasliklar A
                 JOIN Kullanicilar K ON 
                     (CASE 
@@ -154,7 +154,7 @@ class FriendManager {
         ";
 
         if (empty($keyword)) {
-            $sql = "SELECT k.KullaniciID, k.Ad, k.Eposta 
+            $sql = "SELECT k.KullaniciID, k.Ad
                     FROM Kullanicilar k 
                     WHERE k.KullaniciID != ? 
                     $excludeCondition 

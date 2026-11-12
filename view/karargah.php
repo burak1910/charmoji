@@ -114,16 +114,17 @@ require __DIR__ . '/ortak/ust.php';
 </section>
 <?php endif; ?>
 
-<section class="bolum" aria-labelledby="siradaki-baslik">
+<?php $siradakiBaslikId = 'siradaki-baslik'; // aria-labelledby ve iki başlık dalı aynı kimliği kullanır ?>
+<section class="bolum" aria-labelledby="<?= $siradakiBaslikId ?>">
     <?php if ($toplam === 0): ?>
         <div class="bos-durum">
             <span class="bos-durum-ikon" aria-hidden="true"><i class="fa-solid fa-scroll"></i></span>
-            <h2 id="siradaki-baslik"><?= t('karargah.bos_baslik') ?></h2>
+            <h2 id="<?= $siradakiBaslikId ?>"><?= t('karargah.bos_baslik') ?></h2>
             <p><?= t('karargah.bos_aciklama') ?></p>
             <a class="dugme dugme-birincil" href="gorevler.php#ekle"><?= t('karargah.bos_dugme') ?></a>
         </div>
     <?php else: ?>
-        <h2 class="bolum-baslik" id="siradaki-baslik"><?= t('karargah.siradaki_baslik') ?></h2>
+        <h2 class="bolum-baslik" id="<?= $siradakiBaslikId ?>"><?= t('karargah.siradaki_baslik') ?></h2>
         <ul class="liste" id="siradaki-liste" data-gorev-listesi="karargah">
             <?php foreach ($siradakiler as $i => $g) {
                 $kart = gorev_karti_html($g, false);
