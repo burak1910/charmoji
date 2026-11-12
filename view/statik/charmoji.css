@@ -354,6 +354,42 @@ body.modal-acik { overflow: hidden; }
 .gorev-tamam-etiket { color: var(--basari); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
 .gorev-not { margin: 6px 0 0; font-size: 14px; color: var(--metin-ikincil); }
 .gorev-karti.gizleniyor { opacity: 0; transform: translateX(8px); transition: opacity 300ms, transform 300ms; }
+.gorev-karti.yeni-kart { box-shadow: 0 0 0 2px var(--altin); animation: kart-gir 300ms ease-out; }
+@keyframes kart-gir { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+/* Seri + bonus tek düğme (M02'yi açar). Görsel olarak küçük; dokunma alanı ::after ile 44 px. */
+.gorev-seri-dugme {
+    position: relative;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: transparent; border: 0; padding: 0; margin: 0; cursor: pointer;
+    font-size: 14px; color: inherit; text-align: left;
+}
+.gorev-seri-dugme::after { content: ''; position: absolute; inset: -12px -6px; }
+.gorev-seri-dugme:focus-visible { outline: 3px solid var(--altin); outline-offset: 4px; border-radius: 4px; }
+
+/* "Görev ekle" sınırda kilitli (S10): kilit ikonlu, soluk; dokununca bildirim. */
+[data-ekle-ac][data-kilitli="1"] { opacity: .7; }
+
+/* E21 form: sunucu hatası kutusu, yetenek değişti uyarısı */
+.form-hata-kutusu {
+    margin: 0 0 12px; padding: 10px 12px; border-radius: var(--kose);
+    border: 1px solid var(--hata); color: var(--hata); background: rgba(255, 122, 122, .08); font-size: 14px;
+}
+#yetenek-uyari { display: block; margin-top: 8px; }
+.gorev-formu .alt-sayfa-dugmeler { position: sticky; bottom: calc(-16px - var(--guvenli-alt)); background: var(--panel); padding: 8px 0 4px; margin-top: 8px; }
+
+/* M02 seri bilgisi */
+.seri-ozet { display: flex; gap: 12px; align-items: center; margin: 4px 0 12px; }
+.seri-ozet p { margin: 0 0 2px; }
+.seri-alev-buyuk { font-size: 32px; color: var(--altin); width: 40px; text-align: center; flex: none; }
+.seri-kurallar { margin: 0 0 12px; padding-left: 20px; color: var(--metin-ikincil); font-size: 14px; display: grid; gap: 4px; }
+.seri-tablo { width: 100%; border-collapse: separate; border-spacing: 0 4px; font-size: 14px; }
+.seri-tablo caption { text-align: left; font-weight: 700; margin-bottom: 4px; }
+.seri-tablo th, .seri-tablo td { text-align: left; padding: 8px 10px; }
+.seri-tablo thead th { color: var(--metin-soluk); font-weight: 600; padding-top: 0; padding-bottom: 0; }
+.seri-tablo tbody th, .seri-tablo tbody td { background: var(--zemin); border-top: 2px solid transparent; border-bottom: 2px solid transparent; }
+.seri-tablo tbody th { font-weight: 600; border-left: 2px solid transparent; border-radius: 6px 0 0 6px; }
+.seri-tablo tbody td:last-child { border-right: 2px solid transparent; border-radius: 0 6px 6px 0; }
+.seri-tablo tr[aria-current="true"] > * { border-color: var(--altin); color: var(--altin); }
 
 .menu-dugme {
     flex: none; width: 44px; height: 44px;

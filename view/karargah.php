@@ -1,7 +1,7 @@
 <?php
 // view/karargah.php - Karargah sekmesi (E10, docs/ux/02-karargah.md)
 // Karakter, mini yetenek barları, günün ilerlemesi ve sıradaki görevler (hızlı tamamlama).
-// Günlük sandık kartı (M01) sonraki aşamadadır.
+// Günlük sandık kartı (M01) sonraki aşamadadır. Seri bilgisi (M02) kartın seri düğmesinden açılır.
 require_once __DIR__ . '/ortak/cekirdek.php';
 require_once __DIR__ . '/ortak/gorev_karti.php';
 
@@ -39,16 +39,12 @@ if ($toplam > 0) {
 
 $sayfa = ['sekme' => 'karargah', 'baslik' => metin('karargah.baslik')];
 $sayfaBetigi = 'gorev.js';
-$sayfaMetinleri = [
+$sayfaMetinleri = array_merge(GOREV_KARTI_METINLERI, [
     'karargah.ruh_hali_hazir', 'karargah.ruh_hali_neseli', 'karargah.ruh_hali_zafer', 'karargah.ruh_hali_uykulu',
     'karargah.ruh_hali_gorev_yok', 'karargah.dokunma_sozu_1', 'karargah.dokunma_sozu_2', 'karargah.dokunma_sozu_3',
     'karargah.dokunma_sozu_4', 'karargah.dokunma_sozu_5', 'karargah.bugun_ilerleme', 'karargah.tum_gorevler',
     'ortak.yetenek_bar_etiketi', 'ortak.sonraki_seviye', 'karargah.karakter_etiketi',
-    'gorevler.kart_odul', 'gorevler.kart_kazanildi', 'gorevler.kart_seri', 'gorevler.kart_seri_yok',
-    'gorevler.kart_tamamlandi', 'gorevler.kart_onay_etiketi', 'gorevler.kart_tamamlandi_etiketi',
-    'gorevler.tamamlandi_bildirim', 'gorevler.geri_alindi_bildirim', 'gorevler.hata_tamamlanamadi',
-    'gorevler.hata_geri_alinamadi', 'gorevler.okuyucu_tamamlandi', 'gorevler.okuyucu_geri_alindi',
-];
+]);
 $sayfaVerisi = [
     'sayfa' => 'karargah',
     'ad' => $ortak['ad'],
@@ -141,4 +137,5 @@ require __DIR__ . '/ortak/ust.php';
         </p>
     <?php endif; ?>
 </section>
+<?= seri_modal_html() ?>
 <?php require __DIR__ . '/ortak/alt.php'; ?>

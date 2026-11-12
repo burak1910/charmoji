@@ -195,9 +195,11 @@
 
     /**
      * Onay alt sayfasını açar. secenek: {baslik, aciklama, not, birincil, ikincil,
-     * tehlikeli, onay}. onay (isteğe bağlı, async): birincil düğmeye basılınca çalışır;
-     * {hata: metin} dönerse sayfa açık kalır ve açıklamanın yerine hata yazılır,
-     * aksi hâlde sayfa kapanır. Promise: onaylandıysa true, vazgeçildiyse false.
+     * tehlikeli, onay, ikincilFn}. onay (isteğe bağlı, async): birincil düğmeye basılınca
+     * çalışır; {hata: metin} dönerse sayfa açık kalır ve açıklamanın yerine hata yazılır,
+     * aksi hâlde sayfa kapanır. ikincilFn (isteğe bağlı): yalnızca ikincil düğmeye
+     * basılınca, sayfa kapandıktan sonra çalışır (Esc / arka plan bunu çağırmaz; ör. M07
+     * "Kaydetmeden çık"). Promise: onaylandıysa true, vazgeçildiyse false.
      */
     function onayIste(secenek) {
         const s = secenek || {};
@@ -249,7 +251,11 @@
                 }
                 onayKapat(true);
             };
-            ikincil.onclick = () => { if (!durum.mesgul) onayKapat(false); };
+            ikincil.onclick = () => {
+                if (durum.mesgul) return;
+                onayKapat(false);
+                if (s.ikincilFn) s.ikincilFn();
+            };
         });
     }
 
