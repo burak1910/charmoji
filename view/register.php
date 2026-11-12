@@ -5,9 +5,9 @@
 // auth.php: çıktı tamponu, yapılandırma ve güvenli oturum başlatma.
 require_once __DIR__ . '/../service/auth.php';
 
-// Zaten giriş yapılmışsa userpage'e at
+// Zaten giriş yapılmışsa Karargah'a at
 if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
-    header("Location: userpage.php");
+    header("Location: karargah.php");
     exit();
 }
 ?>

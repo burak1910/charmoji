@@ -1,221 +1,120 @@
 <?php
-// view/market.php
-// Oturum, auth.php içinde güvenli çerez ayarlarıyla başlatılır.
-require_once __DIR__ . '/../service/auth.php';
+// view/market.php - Market sekmesi (E30, docs/ux/04-market.md)
+// Tür filtresi, eşya ızgarası (sıralama 04 §2.1), satın alma onayı (M05, G07).
+// Eşya detayı ve deneme (E31) ile nadirlik sonraki aşamadadır: bu aşamada karta
+// dokunmak doğrudan M05 onayını açar.
+require_once __DIR__ . '/ortak/cekirdek.php';
 
-if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
+$ortak = sayfa_baslat();
+$conn = $ortak['conn'];
+$kullaniciID = $ortak['id'];
 
-$kullaniciID = $_SESSION['user_id'];
-$conn = get_db_connection();
+$urunler = vt_satirlar($conn,
+    "SELECT M.EsyaID, M.Ad, M.Aciklama, M.Fiyat, M.GorselURL, M.EsyaTuru, M.GerekenSeviye,
+            COALESCE(E.KusandiMi, -1) AS Durum
+       FROM MarketEsyalari M
+       LEFT JOIN KullaniciEnvanteri E ON E.EsyaID = M.EsyaID AND E.KullaniciID = ?
+      ORDER BY M.Fiyat ASC, M.EsyaID ASC", "i", [$kullaniciID]);
 
-// --- KULLANICI BİLGİLERİNİ VE LEVELINI HESAPLA ---
-// Market'te level sınırı olduğu için önce kullanıcının levelını bulmamız lazım.
-function hesaplaLevel($toplamPuan) {
-    $level = 1;
-    $gerekliXP = 100;
-    while ($toplamPuan >= $gerekliXP) {
-        $toplamPuan -= $gerekliXP;
-        $level++;
-        $gerekliXP *= 2;
+// Sıralama (04 §2.1): alınabilir (fiyat artan) → seviye kilitli (seviye, fiyat) → sahip olunan (fiyat).
+$grup = function (array $u) use ($ortak): int {
+    if ((int) $u['Durum'] >= 0) {
+        return 2;
     }
-    return $level;
-}
+    return (int) $u['GerekenSeviye'] > $ortak['seviye'] ? 1 : 0;
+};
+usort($urunler, function ($a, $b) use ($grup) {
+    $ga = $grup($a);
+    $gb = $grup($b);
+    if ($ga !== $gb) {
+        return $ga <=> $gb;
+    }
+    if ($ga === 1 && (int) $a['GerekenSeviye'] !== (int) $b['GerekenSeviye']) {
+        return (int) $a['GerekenSeviye'] <=> (int) $b['GerekenSeviye'];
+    }
+    return [(float) $a['Fiyat'], (int) $a['EsyaID']] <=> [(float) $b['Fiyat'], (int) $b['EsyaID']];
+});
 
-// Toplam XP'yi çek
-$statsSql = $conn->query("SELECT SUM(ToplamPuan) as ToplamXP FROM KullaniciStatlari WHERE KullaniciID = $kullaniciID");
-$toplamXP = $statsSql->fetch_assoc()['ToplamXP'] ?? 0;
-// Stat sayısına bölerek ortalama levelı bul (Userpage ile aynı mantık)
-$statSayisi = 5; // Zeka, Güç vb.
-$ortalamaLevel = hesaplaLevel(floor($toplamXP / $statSayisi));
+$sayfa = ['sekme' => 'market', 'baslik' => metin('market.baslik')];
+$sayfaBetigi = 'market.js';
+$sayfaMetinleri = [
+    'market.kart_cantada', 'market.kart_kilit', 'market.kart_eksik', 'market.detay_kilit_aciklama',
+    'market.satin_al_onay_baslik', 'market.satin_al_onay_aciklama', 'market.satin_al_onay_not',
+    'market.satin_al_onay_dugme', 'market.satin_alindi_bildirim', 'market.satin_alindi_okuyucu',
+    'market.hata_yetersiz_altin', 'market.hata_zaten_sahip', 'market.hata_bulunamadi', 'market.hata_satin_alinamadi',
+    'market.kart_etiketi', 'ortak.kusan', 'ortak.kusanildi', 'ortak.kusanildi_bildirim', 'ortak.hata_kusanilamadi',
+];
+$sayfaVerisi = ['sayfa' => 'market', 'seviye' => $ortak['seviye']];
 
-// Bakiyeyi Çek
-$user = $conn->query("SELECT Bakiye FROM Kullanicilar WHERE KullaniciID = $kullaniciID")->fetch_assoc();
-$bakiye = $user['Bakiye'];
-
-// --- ÜRÜNLERİ ÇEK (YENİ SÜTUN İSİMLERİYLE) ---
-$sql = "SELECT M.*, 
-       (SELECT COUNT(*) FROM KullaniciEnvanteri E WHERE E.EsyaID = M.EsyaID AND E.KullaniciID = $kullaniciID) as SahipMi
-       FROM MarketEsyalari M ORDER BY M.Fiyat ASC";
-$urunler = $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
+require __DIR__ . '/ortak/ust.php';
 ?>
-
-<!DOCTYPE html>
-<html lang="tr" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Charmoji - Market</title>
-    <link rel="icon" type="image/png" href="../charmoji.png">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: { primary: '#F97316', darkBg: '#111827', cardBg: '#1F2937' }
-                }
-            }
-        }
-    </script>
-    <style>
-        body { background-color: #111827; color: #F3F4F6; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #111827; }
-        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #F97316; }
-    </style>
-</head>
-<body class="antialiased min-h-screen">
-
-    <nav class="fixed w-full z-50 bg-gray-900/90 backdrop-blur-md border-b border-gray-700 shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16 relative">
-                
-                <div class="flex-shrink-0 flex items-center gap-2 z-10">
-                    <a href="userpage.php" class="text-gray-400 hover:text-white transition flex items-center gap-2 group">
-                        <div class="w-8 h-8 rounded-full border border-gray-600 flex items-center justify-center group-hover:border-primary group-hover:text-primary transition">
-                            <i class="fa-solid fa-arrow-left"></i>
-                        </div>
-                        <span class="text-sm font-bold hidden sm:block">Geri Dön</span>
-                    </a>
-                </div>
-                
-                <div class="absolute left-1/2 transform -translate-x-1/2 z-10 pointer-events-none">
-                    <div class="relative px-6 py-2">
-                        <div class="absolute inset-0 bg-primary/20 rounded-lg blur-xl opacity-50"></div>
-                        <span class="relative font-black text-2xl text-white tracking-[0.2em] text-shadow">
-                            MARKET
-                        </span>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-4 z-10">
-                    <div class="flex items-center gap-2 bg-gray-950 px-4 py-2 rounded-lg border border-yellow-600/40 text-yellow-500 font-bold text-lg shadow-inner shadow-black/50">
-                        <i class="fa-solid fa-coins text-yellow-400 animate-pulse"></i> 
-                        <span id="user-balance" class="text-gray-100 tracking-wide"><?php echo number_format($bakiye, 0); ?></span>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </nav>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
-        
-        <?php if(empty($urunler)): ?>
-            <div class="text-center py-20">
-                <i class="fa-solid fa-box-open text-gray-700 text-6xl mb-4"></i>
-                <h2 class="text-xl text-gray-500">Market şu an boş.</h2>
-                <p class="text-sm text-gray-600">Veritabanında ürün yok.</p>
-            </div>
-        <?php else: ?>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <?php foreach($urunler as $urun): 
-                    // Level Kontrolü
-                    $yeterliLevel = $ortalamaLevel >= $urun['GerekenSeviye'];
-                ?>
-                <div id="item-card-<?php echo $urun['EsyaID']; ?>" class="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden hover:border-primary/50 transition-all hover:shadow-2xl hover:shadow-orange-900/20 group relative flex flex-col">
-                    
-                    <div class="absolute top-3 left-3 z-10 flex gap-2">
-                        <span class="bg-black/60 backdrop-blur text-[10px] font-bold px-2 py-1 rounded text-gray-300 border border-gray-600 uppercase tracking-wide">
-                            <?php echo htmlspecialchars($urun['EsyaTuru']); ?>
-                        </span>
-                        
-                        <span class="text-[10px] font-bold px-2 py-1 rounded border uppercase tracking-wide <?php echo $yeterliLevel ? 'bg-green-900/60 text-green-400 border-green-700' : 'bg-red-900/60 text-red-400 border-red-700'; ?>">
-                            Lvl <?php echo $urun['GerekenSeviye']; ?>
-                        </span>
-                    </div>
-
-                    <div class="h-48 bg-gradient-to-b from-gray-800 to-gray-900 flex items-center justify-center relative overflow-hidden">
-                        <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <i class="fa-solid <?php echo htmlspecialchars($urun['GorselURL']); ?> text-7xl text-gray-500 group-hover:text-primary group-hover:scale-110 transition-all duration-300 drop-shadow-2xl <?php echo !$yeterliLevel ? 'opacity-50' : ''; ?>"></i>
-                        
-                        <?php if(!$yeterliLevel): ?>
-                            <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                <i class="fa-solid fa-lock text-4xl text-gray-400"></i>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-
-                    <div class="p-5 flex flex-col flex-1">
-                        <h3 class="text-lg font-black text-white mb-1 group-hover:text-primary transition-colors"><?php echo htmlspecialchars($urun['Ad']); ?></h3>
-                        <p class="text-xs text-gray-400 mb-6 line-clamp-2 h-8"><?php echo htmlspecialchars($urun['Aciklama']); ?></p>
-                        
-                        <div class="mt-auto flex items-center justify-between">
-                            <span class="text-yellow-500 font-bold flex items-center gap-1.5 text-lg">
-                                <i class="fa-solid fa-coins text-sm"></i> <?php echo number_format($urun['Fiyat'], 0); ?>
-                            </span>
-
-                            <?php if($urun['SahipMi'] > 0): ?>
-                                <button disabled class="bg-gray-700/50 text-gray-500 border border-gray-600 px-4 py-2 rounded-lg text-xs font-bold cursor-not-allowed w-28 uppercase tracking-wide">
-                                    Envanterde
-                                </button>
-                            <?php elseif(!$yeterliLevel): ?>
-                                <button disabled class="bg-gray-800 text-gray-500 border border-gray-600 px-4 py-2 rounded-lg text-xs font-bold cursor-not-allowed w-28 uppercase tracking-wide">
-                                    Lvl <?php echo $urun['GerekenSeviye']; ?>+
-                                </button>
-                            <?php else: ?>
-                                <button onclick="buyItem(<?php echo $urun['EsyaID']; ?>, <?php echo $urun['Fiyat']; ?>, this)" 
-                                        class="bg-white text-black hover:bg-primary hover:text-white px-4 py-2 rounded-lg text-xs font-black transition w-28 shadow-lg uppercase tracking-wide transform active:scale-95">
-                                    SATIN AL
-                                </button>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+<?php if ($urunler === []): ?>
+<section class="bolum">
+    <div class="bos-durum">
+        <span class="bos-durum-ikon" aria-hidden="true"><i class="fa-solid fa-store"></i></span>
+        <h2><?= t('market.bos_baslik') ?></h2>
+        <p><?= t('market.bos_aciklama') ?></p>
     </div>
+</section>
+<?php else: ?>
+<section class="bolum">
+    <div class="cipler" role="group" aria-label="<?= t('ortak.filtre_etiketi') ?>" id="market-filtre">
+        <button type="button" class="cip" data-filtre="" aria-pressed="true"><?= t('ortak.filtre_tumu') ?></button>
+        <?php foreach (ESYA_TURLERI as $tur => $sonek): ?>
+            <button type="button" class="cip" data-filtre="<?= e($tur) ?>" aria-pressed="false"><?= t('ortak.tur_' . $sonek) ?></button>
+        <?php endforeach; ?>
+    </div>
+</section>
 
-    <script>
-        // AJAX istekleri için CSRF jetonu (X-CSRF-Token başlığında gönderilir).
-        const CSRF_JETONU = <?php echo json_encode(csrf_jetonu()); ?>;
-        function buyItem(itemId, price, btn) {
-            const currentBalance = parseInt(document.getElementById('user-balance').innerText.replace(/,/g, ''));
-            
-            if(currentBalance < price) {
-                alert("Yetersiz bakiye! Biraz daha görev yapmalısın.");
-                return;
+<section class="bolum" aria-label="<?= t('market.baslik') ?>">
+    <ul class="liste esya-izgara" id="esya-izgara">
+        <?php foreach ($urunler as $u):
+            $fiyat = (int) floor((float) $u['Fiyat']);
+            $sahip = (int) $u['Durum'] >= 0;
+            $kusanili = (int) $u['Durum'] === 1;
+            $kilitli = !$sahip && (int) $u['GerekenSeviye'] > $ortak['seviye'];
+            $eksik = max(0, $fiyat - $ortak['altin']);
+            if ($kusanili) {
+                $durumMetni = metin('ortak.kusanildi');
+            } elseif ($sahip) {
+                $durumMetni = metin('market.kart_cantada');
+            } elseif ($kilitli) {
+                $durumMetni = metin('market.kart_kilit', ['seviye' => (int) $u['GerekenSeviye']]);
+            } elseif ($eksik > 0) {
+                $durumMetni = metin('market.kart_eksik', ['eksik' => sayi_tr($eksik)]);
+            } else {
+                $durumMetni = '';
             }
-
-            if(!confirm("Bu eşyayı satın almak istiyor musun?")) return;
-
-            const originalText = btn.innerHTML;
-            const originalClass = btn.className;
-            
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
-            btn.className = "bg-gray-600 text-white px-4 py-2 rounded-lg text-xs font-bold w-28 cursor-wait";
-            btn.disabled = true;
-
-            fetch('ajax_islem.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': CSRF_JETONU},
-                body: `buy_item_id=${itemId}`
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.success) {
-                    document.getElementById('user-balance').innerText = new Intl.NumberFormat().format(data.new_balance);
-                    btn.className = "bg-gray-700/50 text-gray-500 border border-gray-600 px-4 py-2 rounded-lg text-xs font-bold cursor-not-allowed w-28 uppercase tracking-wide";
-                    btn.innerHTML = 'Envanterde';
-                } else {
-                    alert("Hata: " + data.message);
-                    btn.innerHTML = originalText;
-                    btn.className = originalClass;
-                    btn.disabled = false;
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                btn.innerHTML = originalText;
-                btn.className = originalClass;
-                btn.disabled = false;
-            });
-        }
-    </script>
-</body>
-</html>
+            // Nadirlik verisi henüz yok: etiketten nadirlik kısmı çıkarılır.
+            $kartEtiketi = trim(preg_replace('/\s+/', ' ', metin('market.kart_etiketi', [
+                'esya' => $u['Ad'], 'nadirlik' => '', 'tur' => tur_adi((string) $u['EsyaTuru']),
+                'fiyat' => sayi_tr($fiyat), 'durum' => $durumMetni,
+            ])));
+        ?>
+        <li data-tur="<?= e($u['EsyaTuru']) ?>">
+            <button type="button" class="esya-karti" style="width:100%"
+                    data-esya-id="<?= (int) $u['EsyaID'] ?>" data-ad="<?= e($u['Ad']) ?>" data-fiyat="<?= $fiyat ?>"
+                    data-seviye="<?= (int) $u['GerekenSeviye'] ?>" data-sahip="<?= $sahip ? '1' : '0' ?>"
+                    aria-label="<?= e($kartEtiketi) ?>">
+                <span class="esya-ikon-kutu" aria-hidden="true">
+                    <i class="fa-solid <?= e($u['GorselURL']) ?>"></i>
+                    <?php if ($kilitli): ?><span class="esya-kilit"><i class="fa-solid fa-lock" style="font-size:24px;color:var(--metin)"></i></span><?php endif; ?>
+                </span>
+                <span class="esya-ad" aria-hidden="true"><?= e($u['Ad']) ?></span>
+                <span class="esya-tur" aria-hidden="true"><?= e(tur_adi((string) $u['EsyaTuru'])) ?></span>
+                <?php if (!$sahip): ?>
+                    <span class="esya-fiyat" aria-hidden="true"><span class="altin-ikon"></span><?= e(sayi_tr($fiyat)) ?></span>
+                <?php endif; ?>
+                <span class="esya-durum<?= $kusanili ? ' kusanildi' : '' ?>" aria-hidden="true"><?= e($durumMetni) ?></span>
+            </button>
+        </li>
+        <?php endforeach; ?>
+    </ul>
+    <div class="bos-durum" id="filtre-bos" hidden>
+        <span class="bos-durum-ikon" aria-hidden="true"><i class="fa-solid fa-box-open"></i></span>
+        <p><?= t('market.filtre_bos') ?></p>
+        <button type="button" class="dugme dugme-ikincil" id="filtre-temizle"><?= t('market.filtre_bos_dugme') ?></button>
+    </div>
+</section>
+<?php endif; ?>
+<?php require __DIR__ . '/ortak/alt.php'; ?>

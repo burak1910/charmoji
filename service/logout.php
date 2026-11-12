@@ -18,7 +18,7 @@ session_destroy();
 // başlat (strict mode sayesinde yok edilen eski kimlik yeniden kullanılmaz).
 guvenli_oturum_baslat();
 oturum_kimligini_yenile();
-$_SESSION['success'] = "Başarıyla çıkış yaptınız. Tekrar bekleriz!";
+$_SESSION['success'] = "Çıkış yaptın. Yine bekleriz.";
 
 // Göreli yönlendirme: uygulama hangi alt dizinde servis edilirse edilsin çalışır.
 header("Location: ../view/index.php");
