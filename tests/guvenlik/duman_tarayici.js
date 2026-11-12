@@ -2,7 +2,7 @@
 // Kullanım: node duman_tarayici.js BASE EPOSTA
 // Gerçek tarayıcıda (390 px mobil genişlik) arayüz üzerinden: kayıt formu -> Görevler'de
 // görev ekleme formu (E21) -> görev kartı onay kutusu (AJAX, X-CSRF-Token) -> Market'te
-// satın alma onayı (G07/M05, AJAX) -> Görünüm kaydet (AJAX) -> Çanta'dan kuşanma (AJAX)
+// satın alma onayı (G07/M05, AJAX) -> Görünüm seçeneği kaydet (AJAX) -> Çanta'dan kuşanma (AJAX)
 // -> Lonca'da arama -> Karakter'de çıkış onayı (M08, POST formu). Dış kaynaklar (CDN)
 // engellenir. Tarayıcının confirm()/alert() pencereleri hiç açılmamalıdır; beş sekmede
 // sayfa betiği hatası (pageerror) olmamalıdır.
@@ -70,14 +70,12 @@ const { chromium } = require('playwright');
 
         // Görünüm kaydet (AJAX)
         await sayfa.goto(base + 'view/avatar.php#gorunum', { waitUntil: 'domcontentloaded' });
-        await sayfa.evaluate(() => {
-            const g = document.getElementById('skinColor');
-            g.value = '#123abc';
-            g.dispatchEvent(new Event('input', { bubbles: true }));
-        });
+        await sayfa.click('.secenek-kutu[data-bolge="sac"][data-n="4"]');
+        const onizlemeSac = await sayfa.getAttribute('#onizleme .pk-sac', 'src');
+        adim('görünüm seçeneği önizlemede (saç 4)', /karakter\/tam\/sac-4-480\.png$/.test(onizlemeSac || ''), onizlemeSac);
         const [y3] = await Promise.all([yanitBekle('ajax_islem.php'), sayfa.click('#gorunum-kaydet')]);
         const j3 = await y3.json();
-        adim('görünüm renk kaydı (AJAX)', y3.status() === 200 && j3.success === true, JSON.stringify(j3));
+        adim('görünüm seçeneği kaydı (AJAX)', y3.status() === 200 && j3.success === true && j3.secenekler && j3.secenekler.sac === 4, JSON.stringify(j3));
 
         // Çanta: eşya seç -> Kuşan (AJAX)
         await sayfa.click('#sekme-canta');

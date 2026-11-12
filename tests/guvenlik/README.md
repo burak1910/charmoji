@@ -55,7 +55,7 @@ bash tests/guvenlik/calistir.sh --eski <commit/branch> b d
 
 | Dosya | Madde | Denetim |
 |---|---|---|
-| `test_a_xss.sh` (+ `xss_tarayici.js`) | a | Kötü renk değerleri kayıtta reddedilir; veritabanına elle yazılmış kötü değer çizimde varsayılana düşer; `$size` kaçamaz; tarayıcıda script çalışmaz |
+| `test_a_xss.sh` (+ `xss_tarayici.js`) | a | Yeni kodda: geçersiz görünüm seçeneği numaraları ve enjeksiyon (`save_avatar_options`) kayıtta reddedilir, yalnızca doğrulanmış tam sayılar yazılır; veritabanına elle yazılmış kötü değer çizimde 1 numaralı seçeneğe düşer, görsel yolu kullanıcı verisinden kurulmaz; eski serbest renk verisi 1 numaralı seçeneklere düşer (S28). Eski kodda: kötü renk değerleri. Her iki kipte `$size` kaçamaz; tarayıcıda script çalışmaz |
 | `test_b_idor.sh` (+ `arkadas_birim.php`) | b | B, A–C kaydını reddedemez/kabul edemez/silemez; meşru red, kabul ve silme çalışır; `FriendManager` dönüş değerleri; Maceracı bul araması (`view/lonca_ara.php`) e-posta sızdırmaz, e-postayla/joker karakterle arama yapılamaz, oturum ister |
 | `test_c_csrf.sh` | c | Kayıt, giriş, friend_action (4 işlem + JSON kipi), görev ekleme (`view/gorevler.php`), 6 AJAX işlemi ve çıkış: jetonsuz ve yanlış jetonlu POST reddedilir, doğru jetonla çalışır; çıkış GET ile yapılamaz; oturumsuz AJAX 401 + `oturum_kapali` |
 | `test_d_oturum.sh` | d | Giriş öncesi/sonrası oturum kimliği farklı, eski kimlik geçersiz; çerez HttpOnly + SameSite; uydurulmuş kimlik (sabitleme) kabul edilmez |
