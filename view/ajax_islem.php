@@ -8,12 +8,15 @@ define('CHARMOJI_JSON_YANIT', true);
 // Oturum ve hata ayarları (display_errors kapalı) auth.php içinde yapılır.
 require_once __DIR__ . '/../service/auth.php';
 require_once __DIR__ . '/avatar_renderer.php'; // Renk doğrulama fonksiyonları
+// Ortak çekirdek: metin(), hesaplaLevelVerileri(). Include anında çıktı, yönlendirme
+// ya da veritabanı işlemi yapmaz (oturum denetimi yalnızca sayfa_baslat() içindedir).
+require_once __DIR__ . '/ortak/cekirdek.php';
 
 // 1. GÜVENLİK KONTROLÜ
 if (!isset($_SESSION['user_id'])) {
     // 401 + kod: arayüz "Oturumun sona erdi" penceresini (G08) gösterir.
     http_response_code(401);
-    echo json_encode(['success' => false, 'kod' => 'oturum_kapali', 'message' => 'Oturum kapalı.']);
+    echo json_encode(['success' => false, 'kod' => 'oturum_kapali', 'message' => metin('ortak.oturum_bitti_baslik')]);
     exit();
 }
 
@@ -55,7 +58,7 @@ function ajax_hata_mesaji(Throwable $e): string {
     }
     error_log(sprintf('[charmoji] ajax_islem hatası %s: %s (%s:%d)',
         get_class($e), $e->getMessage(), $e->getFile(), $e->getLine()));
-    return 'İşlem sırasında bir sunucu hatası oluştu.';
+    return metin('ortak.hata_genel');
 }
 
 // Hazır ifade (prepared statement) kısayolu: sorguyu hazırlar, bağlar, çalıştırır.
@@ -91,7 +94,7 @@ if (isset($_POST['save_avatar_colors'])) {
     }
     if (!$gecerli) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Geçersiz renk verisi. Renkler #RRGGBB biçiminde olmalı.']);
+        echo json_encode(['success' => false, 'message' => metin('gorunum.hata_gecersiz_secenek')]);
         exit();
     }
 
@@ -99,7 +102,7 @@ if (isset($_POST['save_avatar_colors'])) {
     $colors = json_encode(array_merge(AVATAR_VARSAYILAN_RENKLER, $temiz));
     try {
         sorgu($conn, "UPDATE Kullanicilar SET AvatarVerisi = ? WHERE KullaniciID = ?", "si", [$colors, $kullaniciID]);
-        echo json_encode(['success' => true, 'message' => 'Görünüm kaydedildi!']);
+        echo json_encode(['success' => true, 'message' => metin('gorunum.kaydedildi_bildirim')]);
     } catch (Throwable $e) {
         echo json_encode(ajax_hata_yaniti($e));
     }
@@ -118,7 +121,7 @@ if (isset($_POST['equip_item_id'])) {
                                 JOIN KullaniciEnvanteri KE ON KE.EsyaID = ME.EsyaID
                                 WHERE ME.EsyaID = ? AND KE.KullaniciID = ?", "ii", [$esyaID, $kullaniciID])
             ->get_result()->fetch_assoc();
-        if(!$turSql) throw new KullaniciHatasi("Eşya bulunamadı.", 'bulunamadi');
+        if(!$turSql) throw new KullaniciHatasi(metin('ortak.hata_kusanilamadi'), 'bulunamadi');
         $tur = $turSql['EsyaTuru'];
 
         // 2. Aynı türdeki diğer eşyaları çıkar (Sadece 1 şapka takılabilir)
@@ -152,22 +155,25 @@ if (isset($_POST['buy_item_id'])) {
         $conn->begin_transaction();
 
         // Fiyat ve Bakiye Kontrolü
-        $esya = sorgu($conn, "SELECT Fiyat FROM MarketEsyalari WHERE EsyaID = ?", "i", [$esyaID])
+        $esya = sorgu($conn, "SELECT Ad, Fiyat FROM MarketEsyalari WHERE EsyaID = ?", "i", [$esyaID])
             ->get_result()->fetch_assoc();
         $user = sorgu($conn, "SELECT Bakiye FROM Kullanicilar WHERE KullaniciID = ?", "i", [$kullaniciID])
             ->get_result()->fetch_assoc();
 
-        if (!$esya) throw new KullaniciHatasi("Ürün bulunamadı.", 'bulunamadi');
+        if (!$esya) throw new KullaniciHatasi(metin('market.hata_bulunamadi'), 'bulunamadi');
+        // Kullanıcı kaydı yoksa (hesap silinmiş) oturum geçersizdir: arayüz G08'i gösterir.
+        if (!$user) throw new KullaniciHatasi(metin('ortak.oturum_bitti_baslik'), 'oturum_kapali');
 
         // Zaten var mı?
         $checkInv = sorgu($conn, "SELECT EnvanterID FROM KullaniciEnvanteri WHERE KullaniciID = ? AND EsyaID = ?",
             "ii", [$kullaniciID, $esyaID])->get_result();
-        if ($checkInv->num_rows > 0) throw new KullaniciHatasi("Zaten sahipsin.", 'zaten_sahip');
+        if ($checkInv->num_rows > 0) throw new KullaniciHatasi(metin('market.hata_zaten_sahip'), 'zaten_sahip');
 
         // Para yetiyor mu?
         if ($user['Bakiye'] < $esya['Fiyat']) {
-            throw new KullaniciHatasi("Yetersiz bakiye.", 'yetersiz_altin', [
-                'eksik' => (int) ceil($esya['Fiyat'] - $user['Bakiye']),
+            $eksik = (int) ceil($esya['Fiyat'] - $user['Bakiye']);
+            throw new KullaniciHatasi(metin('market.hata_yetersiz_altin', ['eksik' => $eksik]), 'yetersiz_altin', [
+                'eksik' => $eksik,
                 'bakiye' => (int) floor($user['Bakiye']),
             ]);
         }
@@ -178,7 +184,7 @@ if (isset($_POST['buy_item_id'])) {
         sorgu($conn, "INSERT INTO KullaniciEnvanteri (KullaniciID, EsyaID) VALUES (?, ?)", "ii", [$kullaniciID, $esyaID]);
 
         $conn->commit();
-        echo json_encode(['success' => true, 'new_balance' => $newBalance, 'message' => 'Satın alındı!']);
+        echo json_encode(['success' => true, 'new_balance' => $newBalance, 'message' => metin('market.satin_alindi_bildirim', ['esya' => $esya['Ad']])]);
 
     } catch (Throwable $e) {
         $conn->rollback();
@@ -204,11 +210,11 @@ if (isset($_POST['claim_quest_id'])) {
         $gorev = sorgu($conn, $sql, "ii", [$kg_id, $kullaniciID])->get_result()->fetch_assoc();
 
         if (!$gorev) {
-            throw new KullaniciHatasi("Ödül alınamaz.", 'bulunamadi');
+            throw new KullaniciHatasi(metin('gorevler.meydan_hata_alinamadi'), 'bulunamadi');
         } elseif ($gorev['OdulAlindiMi'] == 1) {
-            throw new KullaniciHatasi("Ödül alınamaz.", 'zaten_alindi');
+            throw new KullaniciHatasi(metin('gorevler.meydan_hata_zaten'), 'zaten_alindi');
         } elseif ($gorev['TamamlandiMi'] != 1) {
-            throw new KullaniciHatasi("Ödül alınamaz.", 'tamamlanmadi');
+            throw new KullaniciHatasi(metin('gorevler.meydan_hata_tamamlanmadi'), 'tamamlanmadi');
         } else {
             sorgu($conn, "UPDATE Kullanicilar SET Bakiye = Bakiye + ? WHERE KullaniciID = ?",
                 "di", [$gorev['OdulPara'], $kullaniciID]);
@@ -243,13 +249,13 @@ if (isset($_POST['is_delete']) && $_POST['is_delete'] == 1) {
         $silme = sorgu($conn, "DELETE FROM KullaniciAliskanliklari WHERE KullaniciAliskanlikID = ? AND KullaniciID = ?",
             "ii", [$ka_id, $kullaniciID]);
         if ($silme->affected_rows < 1) {
-            echo json_encode(['success' => false, 'kod' => 'bulunamadi', 'message' => 'Alışkanlık bulunamadı.']);
+            echo json_encode(['success' => false, 'kod' => 'bulunamadi', 'message' => metin('gorevler.hata_silinemedi')]);
             exit();
         }
         echo json_encode(['success' => true]);
     } catch (Throwable $e) {
         ajax_hata_mesaji($e); // log'a yaz
-        echo json_encode(['success' => false, 'message' => 'Silinemedi']);
+        echo json_encode(['success' => false, 'message' => metin('gorevler.hata_silinemedi')]);
     }
     exit();
 }
@@ -260,20 +266,13 @@ if (isset($_POST['is_delete']) && $_POST['is_delete'] == 1) {
 
 // Eğer yukarıdaki özel işlemlerden hiçbiri değilse, bu bir checkbox işaretlemesidir.
 if (!isset($_POST['ka_id']) || !isset($_POST['durum'])) {
-    echo json_encode(['success' => false, 'message' => 'Eksik parametre.']);
+    echo json_encode(['success' => false, 'message' => metin('ortak.hata_genel')]);
     exit();
 }
 
 $ka_id = intval($_POST['ka_id']);
 $durum = intval($_POST['durum']);
 $dunkuTarih = date('Y-m-d', strtotime('-1 day'));
-
-// İstatistik fonksiyonu
-function hesaplaLevelVerileri($toplamPuan) {
-    $level = 1; $gerekliXP = 100;
-    while ($toplamPuan >= $gerekliXP) { $toplamPuan -= $gerekliXP; $level++; $gerekliXP *= 2; }
-    return ['level' => $level, 'currentXP' => $toplamPuan, 'neededXP' => $gerekliXP, 'percent' => ($toplamPuan / $gerekliXP) * 100];
-}
 
 try {
     $conn->begin_transaction();
@@ -284,7 +283,7 @@ try {
             WHERE KA.KullaniciAliskanlikID = ? AND KA.KullaniciID = ?";
     $veri = sorgu($conn, $sql, "ii", [$ka_id, $kullaniciID])->get_result()->fetch_assoc();
 
-    if (!$veri) throw new KullaniciHatasi("Kayıt bulunamadı.", 'bulunamadi');
+    if (!$veri) throw new KullaniciHatasi(metin('gorevler.hata_tamamlanamadi'), 'bulunamadi');
 
     $basePuan = $veri['Puan'];
     $mevcutSeri = $veri['Seri'];

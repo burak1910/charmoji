@@ -31,7 +31,6 @@ return [
     'ortak.kaydet' => 'Kaydet',
     'ortak.geri_al' => 'Geri al',
     'ortak.tekrar_dene' => 'Tekrar dene',
-    'ortak.yeniden_yukle' => 'Yeniden yükle',
     'ortak.yukleniyor' => 'Yükleniyor',
     'ortak.hata_genel' => 'Bir şeyler ters gitti. Birazdan tekrar dene.',
     'ortak.istek_basarisiz' => 'İstek ulaşmadı. Bağlantını kontrol edip tekrar dene.',
@@ -175,7 +174,6 @@ return [
     'market.satin_alindi_bildirim' => 'Çantana eklendi: {esya}',
     'market.satin_alindi_okuyucu' => '{esya} satın alındı. Kalan altın {kalan}.',
     'market.hata_yetersiz_altin' => 'Altının yetmiyor. {eksik} altın daha lazım.',
-    'market.hata_seviye' => 'Bu eşya için seviye {gereken} gerekiyor.',
     'market.hata_zaten_sahip' => 'Bu eşya zaten çantanda.',
     'market.hata_bulunamadi' => 'Bu eşya artık satışta değil.',
     'market.hata_satin_alinamadi' => 'Satın alma tamamlanamadı. Altının yerinde, birazdan tekrar dene.',
@@ -229,6 +227,8 @@ return [
     'lonca.cikar_onay_dugme' => 'Çıkar',
     'lonca.cikarildi_bildirim' => 'Arkadaşlıktan çıkarıldı.',
     'lonca.cikar_hata' => 'Arkadaşlıktan çıkarılamadı. Birazdan tekrar dene.',
+    // 08'de karşılığı yok: arkadaşlık isteği kabul edildi bildirimi ({ad} bilinmeden gösterilir).
+    'yerel.istek_kabul_edildi' => 'Arkadaşlık isteği kabul edildi.',
     // 08'de karşılığı yok: Sıralama iç sekmesi sonraki aşamada gelene kadar yer tutucu.
     'yerel.siralama_yakinda' => 'Haftalık sıralama çok yakında burada.',
 
@@ -268,7 +268,6 @@ return [
     'canta.bos_baslik' => 'Çantan boş',
     'canta.bos_aciklama' => "Market'te seni bekleyen eşyalar var.",
     'canta.bos_dugme' => "Market'e git",
-    'canta.esya_etiketi' => '{esya}, {nadirlik} {tur}. {durum}',
 
     // --- Tanıtım (çıkış sonrası bildirim)
     'tanitim.cikis_bildirim' => 'Çıkış yaptın. Yine bekleriz.',

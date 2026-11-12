@@ -2,6 +2,8 @@
 // service/logout.php
 // 1. Mevcut oturumu güvenli ayarlarla yakala (auth.php başlatır)
 require_once __DIR__ . '/auth.php';
+// metin() için ortak çekirdek (include anında çıktı/yönlendirme/veritabanı işlemi yapmaz).
+require_once __DIR__ . '/../view/ortak/cekirdek.php';
 
 // Çıkış durum değiştiren bir işlemdir: yalnızca CSRF jetonlu POST ile yapılır
 // (GET ile, ör. bir <img src> ya da bağlantıyla tetiklenemez).
@@ -18,7 +20,7 @@ session_destroy();
 // başlat (strict mode sayesinde yok edilen eski kimlik yeniden kullanılmaz).
 guvenli_oturum_baslat();
 oturum_kimligini_yenile();
-$_SESSION['success'] = "Çıkış yaptın. Yine bekleriz.";
+$_SESSION['success'] = metin('tanitim.cikis_bildirim');
 
 // Göreli yönlendirme: uygulama hangi alt dizinde servis edilirse edilsin çalışır.
 header("Location: ../view/index.php");

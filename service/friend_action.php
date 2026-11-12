@@ -16,6 +16,8 @@ if ($jsonKipi) {
 
 // auth.php (FriendManager üzerinden) oturumu güvenli ayarlarla başlatır.
 require_once __DIR__ . '/FriendManager.php';
+// metin() için ortak çekirdek (include anında çıktı/yönlendirme/veritabanı işlemi yapmaz).
+require_once __DIR__ . '/../view/ortak/cekirdek.php';
 
 function arkadas_yanit(bool $basari, string $kod = '', array $ek = []): void
 {
@@ -55,13 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sonuc = FriendManager::sendRequest($myID, $targetID);
 
         if ($sonuc === true) {
-            $_SESSION['bildirim'] = ['tur' => 'bilgi', 'metin' => 'Arkadaşlık isteği gönderildi.'];
+            $_SESSION['bildirim'] = ['tur' => 'bilgi', 'metin' => metin('lonca.istek_gonderildi_bildirim')];
             arkadas_yanit(true);
         } else {
             $kod = str_starts_with((string) $sonuc, 'Zaten') ? 'zaten_var' : 'gonderilemedi';
             $_SESSION['bildirim'] = ['tur' => 'hata', 'metin' => $kod === 'zaten_var'
-                ? 'Bu maceracıyla aranızda zaten bir istek ya da arkadaşlık var.'
-                : 'İstek gönderilemedi. Birazdan tekrar dene.'];
+                ? metin('lonca.istek_zaten_var')
+                : metin('lonca.istek_gonder_hata')];
             arkadas_yanit(false, $kod);
         }
     }
@@ -72,10 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $donus = '#istekler';
 
         if (FriendManager::acceptRequest($istekID, $myID)) {
-            $_SESSION['bildirim'] = ['tur' => 'bilgi', 'metin' => 'Arkadaşlık isteği kabul edildi.'];
+            $_SESSION['bildirim'] = ['tur' => 'bilgi', 'metin' => metin('yerel.istek_kabul_edildi')];
             arkadas_yanit(true);
         } else {
-            $_SESSION['bildirim'] = ['tur' => 'hata', 'metin' => 'Bu istek artık geçerli değil.'];
+            $_SESSION['bildirim'] = ['tur' => 'hata', 'metin' => metin('lonca.istek_hata_artik_yok')];
             arkadas_yanit(false, 'artik_yok');
         }
     }
@@ -86,10 +88,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $donus = '#istekler';
 
         if (FriendManager::rejectRequest($istekID, $myID)) {
-            $_SESSION['bildirim'] = ['tur' => 'bilgi', 'metin' => 'İstek reddedildi.'];
+            $_SESSION['bildirim'] = ['tur' => 'bilgi', 'metin' => metin('lonca.istek_red_bildirim')];
             arkadas_yanit(true);
         } else {
-            $_SESSION['bildirim'] = ['tur' => 'hata', 'metin' => 'Bu istek artık geçerli değil.'];
+            $_SESSION['bildirim'] = ['tur' => 'hata', 'metin' => metin('lonca.istek_hata_artik_yok')];
             arkadas_yanit(false, 'artik_yok');
         }
     }
@@ -100,10 +102,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $donus = '#arkadaslar';
 
         if (FriendManager::removeFriend($arkadaslikID, $myID)) {
-            $_SESSION['bildirim'] = ['tur' => 'bilgi', 'metin' => 'Arkadaşlıktan çıkarıldı.'];
+            $_SESSION['bildirim'] = ['tur' => 'bilgi', 'metin' => metin('lonca.cikarildi_bildirim')];
             arkadas_yanit(true);
         } else {
-            $_SESSION['bildirim'] = ['tur' => 'hata', 'metin' => 'Bu maceracı artık loncanda değil.'];
+            $_SESSION['bildirim'] = ['tur' => 'hata', 'metin' => metin('lonca.profil_hata_yok')];
             arkadas_yanit(false, 'artik_yok');
         }
     }
