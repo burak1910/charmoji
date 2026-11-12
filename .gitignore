@@ -5,3 +5,6 @@
 # Ortam değişkenleri (gizli bilgiler). Örnek dosya takipli kalır.
 .env
 !.env.example
+
+# Python derleme önbelleği (araç betikleri)
+__pycache__/
