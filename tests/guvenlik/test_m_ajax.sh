@@ -1,5 +1,6 @@
 # tests/guvenlik/test_m_ajax.sh  (calistir.sh tarafından source edilir)
 # m) K-1: ajax_islem.php başarısız silme/kuşanmada success:false döner ve veri değişmez.
+#    Silme = arşivleme (S18): görev satırı kalır, AktifMi = 0 olur.
 
 bolum "m) AJAX: başkasının alışkanlığını silme / sahip olunmayan eşyayı kuşanma"
 
@@ -22,7 +23,7 @@ KA_B=$(sql "SELECT KullaniciAliskanlikID FROM KullaniciAliskanliklari WHERE Kull
 ajax "${MK[B]}" "${MJ[B]}" -d "is_delete=1" -d "ka_id=$KA_A"
 kanit "B, A'nın alışkanlığını siliyor: $HTTP_GOVDE"
 dogrula "K-1: başkasının alışkanlığını silme success:false döner" esit "$(basari)" '"success":false'
-dogrula "K-1: A'nın alışkanlığı duruyor" esit "$(sql "SELECT COUNT(*) FROM KullaniciAliskanliklari WHERE KullaniciAliskanlikID=$KA_A")" "1"
+dogrula "K-1: A'nın alışkanlığı duruyor (aktif)" esit "$(sql "SELECT AktifMi FROM KullaniciAliskanliklari WHERE KullaniciAliskanlikID=$KA_A")" "1"
 
 ajax "${MK[B]}" "${MJ[B]}" -d "is_delete=1" -d "ka_id=99999999"
 dogrula "K-1: olmayan alışkanlığı silme success:false döner" esit "$(basari)" '"success":false'
@@ -30,7 +31,10 @@ dogrula "K-1: olmayan alışkanlığı silme success:false döner" esit "$(basar
 ajax "${MK[B]}" "${MJ[B]}" -d "is_delete=1" -d "ka_id=$KA_B"
 kanit "B kendi alışkanlığını siliyor: $HTTP_GOVDE"
 dogrula "K-1: meşru silme success:true döner" esit "$(basari)" '"success":true'
-dogrula "K-1: meşru silmede kayıt gerçekten silindi" esit "$(sql "SELECT COUNT(*) FROM KullaniciAliskanliklari WHERE KullaniciAliskanlikID=$KA_B")" "0"
+dogrula "K-1: meşru silmede görev listeden çıktı (arşivlendi: AktifMi=0, ArsivZamani dolu)" \
+    esit "$(sql "SELECT CONCAT(AktifMi, ',', ArsivZamani IS NOT NULL) FROM KullaniciAliskanliklari WHERE KullaniciAliskanlikID=$KA_B")" "0,1"
+ajax "${MK[B]}" "${MJ[B]}" -d "is_delete=1" -d "ka_id=$KA_B"
+dogrula "K-1: arşivlenmiş görevi yeniden silme success:false döner" esit "$(basari)" '"success":false'
 
 # --- eşya kuşanma: Kral Tacı yalnızca A'da; B'nin kendi eşyaları var
 ESYA_SAPKA1=$(sql "SELECT EsyaID FROM MarketEsyalari WHERE Ad='Büyücü Şapkası'")

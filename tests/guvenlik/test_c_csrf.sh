@@ -101,8 +101,9 @@ uc_dene "ajax alışkanlık işaretleme" "SELECT COUNT(*) FROM TakipKayitlari WH
 GOREV=$(sql "SELECT KG.KullaniciGorevID FROM KullaniciGunlukGorevleri KG JOIN GorevTanimlari GT ON GT.GorevTanimID=KG.GorevTanimID WHERE KG.KullaniciID=$U_ID AND GT.Baslik='Günlük Giriş' LIMIT 1")
 a_odul()    { ajax_post "$1" -d "claim_quest_id=$GOREV"; }
 uc_dene "ajax claim_quest_id" "SELECT OdulAlindiMi FROM KullaniciGunlukGorevleri WHERE KullaniciGorevID=${GOREV:-0}" a_odul
+# Silme = arşivleme (S18): satır kalır, AktifMi 1 -> 0 olur.
 a_sil()     { ajax_post "$1" -d "ka_id=$KA_ID" -d "is_delete=1"; }
-uc_dene "ajax is_delete" "SELECT COUNT(*) FROM KullaniciAliskanliklari WHERE KullaniciAliskanlikID=$KA_ID" a_sil
+uc_dene "ajax is_delete (arşivle)" "SELECT AktifMi FROM KullaniciAliskanliklari WHERE KullaniciAliskanlikID=$KA_ID" a_sil
 
 # --- logout.php
 istek "$G" "${BASE}service/logout.php"

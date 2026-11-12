@@ -50,7 +50,7 @@ gizli_yol_denetimi() { # KOK ETIKET
     # Dalga 2: ortak sayfa parçaları yalnızca include edilir; statik css/js sunulur.
     if [[ -d "$L_KOPYA/view/ortak" ]]; then
         for yol in view/ortak/cekirdek.php view/ortak/ust.php view/ortak/alt.php view/ortak/metinler.php \
-                   view/ortak/gorev_karti.php view/Ortak/cekirdek.php view/ortak/; do
+                   view/ortak/gorev_karti.php view/ortak/gorev_islemleri.php view/Ortak/cekirdek.php view/ortak/; do
             istek "$L_KAV" "${kok}${yol}"
             dogrula "$etiket: /$yol 404 dönüyor (parça doğrudan çağrılamaz)" \
                 bash -c '[[ "$0" == "404" && "$1" != *"<html"* && "$1" != *"<?php"* ]]' "$HTTP_KOD" "$HTTP_GOVDE"

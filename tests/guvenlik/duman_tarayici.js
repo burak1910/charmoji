@@ -1,7 +1,7 @@
 // tests/guvenlik/duman_tarayici.js
 // Kullanım: node duman_tarayici.js BASE EPOSTA
 // Gerçek tarayıcıda (390 px mobil genişlik) arayüz üzerinden: kayıt formu -> Görevler'de
-// görev ekleme formu (E21) -> görev kartı onay kutusu (AJAX, X-CSRF-Token) -> Market'te
+// görev ekleme formu (E21, AJAX) -> görev kartı onay kutusu (AJAX, X-CSRF-Token) -> Market'te
 // satın alma onayı (G07/M05, AJAX) -> Görünüm kaydet (AJAX) -> Çanta'dan kuşanma (AJAX)
 // -> Lonca'da arama -> Karakter'de çıkış onayı (M08, POST formu). Dış kaynaklar (CDN)
 // engellenir. Tarayıcının confirm()/alert() pencereleri hiç açılmamalıdır; beş sekmede
@@ -41,14 +41,16 @@ const { chromium } = require('playwright');
             adim('alt menü: ' + sekme, sayfa.url().startsWith(base + 'view/' + dosya + '.php') && etkin.startsWith(dosya + '.php'), sayfa.url());
         }
 
-        // Görev ekleme formu (E21)
+        // Görev ekleme formu (E21; AJAX ile gönderilir, kart sayfa yenilenmeden eklenir)
         await sayfa.goto(base + 'view/gorevler.php', { waitUntil: 'domcontentloaded' });
-        await sayfa.click('[data-ekle-ac]');
+        await sayfa.click('[data-ekle-ac]:visible');
         await sayfa.fill('#habit_name', 'tarayici_gorev');
         await sayfa.click('label[for="yetenek-zeka"]');
-        await Promise.all([sayfa.waitForNavigation({ waitUntil: 'domcontentloaded' }), sayfa.click('#ekle-form button[type=submit]')]);
+        const [y0] = await Promise.all([yanitBekle('ajax_islem.php'), sayfa.click('#ekle-form button[type=submit]')]);
+        const j0 = await y0.json();
+        await sayfa.waitForSelector('#ekle-arka', { state: 'hidden' });
         const kutu = sayfa.locator('.gorev-karti .gorev-onay').first();
-        adim('görev ekleme formu', (await kutu.count()) === 1, sayfa.url());
+        adim('görev ekleme formu (AJAX)', j0.success === true && (await kutu.count()) === 1, JSON.stringify({ success: j0.success, kod: j0.kod }));
 
         // Görev tamamlama (AJAX)
         const [y1] = await Promise.all([yanitBekle('ajax_islem.php'), kutu.click()]);

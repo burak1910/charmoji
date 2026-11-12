@@ -18,7 +18,7 @@ Aynı betikler hem **yeni** kodu hem **eski** kodu sınar: eski kodda açıklar
 Depo kökünden:
 
 ```bash
-# Yeni kod, tüm testler (a..m)
+# Yeni kod, tüm testler (a..n)
 bash tests/guvenlik/calistir.sh
 
 # Yalnızca bazı testler
@@ -61,13 +61,14 @@ bash tests/guvenlik/calistir.sh --eski <commit/branch> b d
 | `test_d_oturum.sh` | d | Giriş öncesi/sonrası oturum kimliği farklı, eski kimlik geçersiz; çerez HttpOnly + SameSite; uydurulmuş kimlik (sabitleme) kabul edilmez |
 | `test_e_hata.sh` | e | Tablo geçici olarak yeniden adlandırılır: yanıtta PHP/SQL metni yok, ayrıntı log'da; olmayan veritabanıyla bağlantı hatası da sızmaz |
 | `test_f_env.sh` | f | Kodda sabit DB bilgisi yok; `.env` olmadan anlaşılır hata, `.env` yazılınca çalışma (uygulamanın geçici kopyasında) |
-| `test_g_sqli.sh` | g | `habit_stat` olarak `x' OR '1'='1` reddedilir; veritabanındaki kötü `StatTuru`/`EsyaTuru` başka kullanıcıları etkilemez |
+| `test_g_sqli.sh` | g | `habit_stat` olarak `x' OR '1'='1` reddedilir (form ve AJAX); veritabanındaki kötü `StatTuru`/`EsyaTuru` başka kullanıcıları etkilemez ve kaçışlanarak basılır |
 | `test_h_duman.sh` (+ `duman_tarayici.js`) | h | Kayıt → çıkış → hatalı giriş → giriş → eski `userpage.php` adresinin Karargah'a yönlenmesi → görev ekle → işaretle → beş sekme + Görünüm/Çanta → çıkış; kökten ve `/charmoji/` alt dizininden; ayrıca tarayıcıda (390 px) arayüz üzerinden: alt menü, görev formu, onay alt sayfaları (M05, M08), arama; `confirm()`/`alert()` açılmaz |
 | `test_i_lint.sh` | i | `php -l` tüm PHP dosyalarında |
 | `test_j_kimlik.sh` | j | B-1: Ad=<kurban e-postası> kaydı kurbanı kilitlemez, ad ile giriş yok, geçersiz e-posta reddedilir; B-3: `O'Brien` / `o'brien@ornek.test` kaydı (ters eğik çizgisiz) + otomatik ve elle giriş |
 | `test_k_cikti.sh` (+ `xss_tarayici.js`) | k | B-2: `GorevTanimlari.Baslik/Ikon` içindeki HTML Görevler sekmesinde (eski kodda userpage'de) kaçışlanır; tarayıcıda dialog/script yok |
 | `test_l_erisim.sh` | l | B-4: uygulama kopyasında `/.env`, `/.git/config`, `/database/schema.sql`, `/tests/...`, `/config/...`, `/sunucu.php` vb. kökten ve `/charmoji/` altından 404; `view/index.php`, giriş sayfası, `style/custom.css`, `view/statik/*.css|js` 200; `view/ortak/*.php` parçaları 404 |
-| `test_m_ajax.sh` | m | K-1: başkasının alışkanlığını silme ve sahip olunmayan eşyayı kuşanma `success:false`, veri değişmez; meşru işlemler çalışır |
+| `test_m_ajax.sh` | m | K-1: başkasının alışkanlığını silme ve sahip olunmayan eşyayı kuşanma `success:false`, veri değişmez; meşru işlemler çalışır (silme = arşivleme: `AktifMi = 0`) |
+| `test_n_gorevler.sh` | n | Aşama 2 görev kuralları: görev kullanıcıya özel sütunlara yazılır, başka oyuncunun aynı adlı görevi yeteneği etkilemez; ad 1–60 karakter (çok baytlı), aktif görevlerde Türkçe büyük/küçük harf duyarsız benzersiz; 20 aktif görev sınırı (AJAX ve form); düzenleme (S19: geçmiş XP eski yetenekte, geri alma doğru yetenekten düşer); silme = arşivleme, "Geri al" (süre, sınır, ad çakışması); sahiplik (düzenle/arşivle/geri getir/tamamla/geri al başkasında `success:false`, veri aynı); tamamla → geri al → tamamla serisi, 7. gün bonusu, bozuk seri (S12), gün sınırı, seviye düşmesi (S8); meydan okuma ilerlemesi türe (`GorevTanimlari.Tur`) göre (S25) ve S7; yeni uçlarda CSRF; kart HTML'inde kaçış |
 
 ## Sayfa yolları (Dalga 2)
 
@@ -85,13 +86,18 @@ Testler resmi şemanın kısıtlarına uyar; kısıtı atlatmak için şema değ
   kabul edilmiş arkadaşlık A-D, B her ikisinde üçüncü kişi; c: her friend_action ucu için
   ayrı hedef kullanıcı).
 - **Satın alma:** seed'deki eşyalar 100-500 altındır; c testi kullanıcıya 1000 altın verir.
-- **Kötü `StatTuru`:** `CHK_KA_StatTuru` ve `CHK_KS_StatTuru` geçersiz değeri reddeder; g testi
-  bunu iki ayrı denetimle doğrular. Koddaki savunmayı yine de sınamak için kısıtsız yol
-  seçildi (kısıtı geçici kaldırmak yerine): uygulama `StatTuru`'nu hâlâ eski ortak
-  `Aliskanliklar` tablosundan okur ve o sütunda kısıt yoktur. Kötü değer orada tutulur,
-  kullanıcı satırı geçerli `Ad`/`StatTuru` ile eklenir (tetikleyici devreye girmez).
-  Sınama boş geçmesin diye fikstürün eklendiği ayrıca denetlenir. `Aliskanliklar` 004 ile
-  kaldırılınca bu fikstürün başka bir kısıtsız yola (ya da kısıtı geçici düşürmeye) taşınması gerekir.
+- **Kötü `StatTuru`:** `CHK_KA_StatTuru`, `CHK_KS_StatTuru` ve `CHK_TK_StatTuru` geçersiz değeri
+  reddeder; g testi bunu üç ayrı denetimle doğrular. Uygulama `StatTuru`'nu artık yalnızca
+  kullanıcıya özel sütundan (`KullaniciAliskanliklari.StatTuru`) okur; koddaki savunmayı
+  (giriş doğrulaması, bağlanan parametreler, kaçışlama) kısıttan bağımsız sınamak için g testi
+  `CHK_KA_StatTuru` ve `CHK_TK_StatTuru`'yu **geçici olarak düşürür**, kötü satırı ekler,
+  sınar, satırı silip iki kısıtı geri ekler ve geri eklendiğini ayrıca denetler. Sınama boş
+  geçmesin diye fikstürün eklendiği de denetlenir. (Eski kod modunda fikstür eski ortak
+  `Aliskanliklar` tablosu üzerinden kurulur.) Bu yol 004 sonrasında da çalışır.
+- **Meydan okuma tanımı:** `GorevTanimlari.Tur` zorunludur (`giris` | `gorev_tamamlama`); k ve n
+  testleri tanım eklerken türü verir.
+- **Tarih:** uygulama günü Europe/Istanbul'a göre hesaplar (S1); n testi beklenen tarihleri
+  PHP ile aynı saat diliminde üretir (veritabanının `CURDATE()`'i farklı olabilir).
 - **Kötü `EsyaTuru` / `AvatarVerisi`:** resmi şemada bu sütunlarda kısıt yoktur; testler aynen
   doğrudan SQL ile kötü değer yazar.
 

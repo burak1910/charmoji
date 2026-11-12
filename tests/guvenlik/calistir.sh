@@ -3,7 +3,7 @@
 # Güvenlik doğrulama betiklerini çalıştırır. Ayrıntı: tests/guvenlik/README.md
 #
 # Kullanım:
-#   tests/guvenlik/calistir.sh                 # yeni kod, tüm testler (a..m)
+#   tests/guvenlik/calistir.sh                 # yeni kod, tüm testler (a..n)
 #   tests/guvenlik/calistir.sh a c g           # yalnızca seçilen testler
 #   tests/guvenlik/calistir.sh --eski          # açıkları ESKİ kodda yeniden üret
 #   tests/guvenlik/calistir.sh --eski REF b    # eski kod olarak REF (git commit) kullan
@@ -41,15 +41,15 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --eski)
             MOD="eski"
-            if [[ $# -gt 1 && ! "$2" =~ ^[a-m]$ ]]; then ESKI_REF="$2"; shift; fi ;;
+            if [[ $# -gt 1 && ! "$2" =~ ^[a-n]$ ]]; then ESKI_REF="$2"; shift; fi ;;
         -h|--help)
             sed -n '2,20p' "$0"; exit 0 ;;
-        [a-m]) SECILENLER+=("$1") ;;
+        [a-n]) SECILENLER+=("$1") ;;
         *) echo "Bilinmeyen argüman: $1" >&2; exit 2 ;;
     esac
     shift
 done
-[[ ${#SECILENLER[@]} -eq 0 ]] && SECILENLER=(a b c d e f g h i j k l m)
+[[ ${#SECILENLER[@]} -eq 0 ]] && SECILENLER=(a b c d e f g h i j k l m n)
 ESKI_REF="${ESKI_REF:-$ESKI_REF_VARSAYILAN}"
 
 GECICI="$(mktemp -d "${TMPDIR:-/tmp}/charmoji-guvenlik.XXXXXX")"

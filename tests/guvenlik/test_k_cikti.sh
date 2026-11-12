@@ -6,7 +6,7 @@ bolum "k) Depolanan XSS (günlük görev Baslik/Ikon)"
 K_BASLIK="X<img src=x onerror=\"window.__xss='baslik';alert(1)\">"
 K_IKON="fa-x\"><img src=x onerror=\"window.__xss='ikon';alert(2)\">"
 sql_kacis() { printf '%s' "$1" | sed "s/'/''/g"; }
-sql "INSERT INTO GorevTanimlari (Baslik, Aciklama, OdulPara, HedefSayi, Ikon) VALUES ('$(sql_kacis "$K_BASLIK")', 'k testi', 5, 1, '$(sql_kacis "$K_IKON")')"
+sql "INSERT INTO GorevTanimlari (Baslik, Aciklama, OdulPara, HedefSayi, Ikon, Tur) VALUES ('$(sql_kacis "$K_BASLIK")', 'k testi', 5, 1, '$(sql_kacis "$K_IKON")', 'gorev_tamamlama')"
 K_TANIM=$(sql "SELECT MAX(GorevTanimID) FROM GorevTanimlari")
 
 K_KAV=$(yeni_kavanoz k_kullanici)
