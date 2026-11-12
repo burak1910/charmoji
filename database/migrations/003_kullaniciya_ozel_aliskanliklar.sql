@@ -91,13 +91,19 @@ SET @cm003_ad = IF(EXISTS (SELECT 1 FROM information_schema.COLUMNS
                             WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'kullanicialiskanliklari'
                               AND COLUMN_NAME = 'Ad'),
                    'COALESCE(ka.Ad, a.Ad)', 'a.Ad');
+-- 005 uygulanmışsa ad yalnızca AKTİF görevler arasında benzersizdir (UQ_KA_Kullanici_AktifAd);
+-- arşivlenmiş aynı adlı görevler sorun sayılmaz ve UQ_KA_Kullanici_Ad yeniden eklenmez.
+SET @cm003_005 = IF(EXISTS (SELECT 1 FROM information_schema.STATISTICS
+                             WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'kullanicialiskanliklari'
+                               AND INDEX_NAME = 'UQ_KA_Kullanici_AktifAd'),
+                    '1 = 0', '1 = 1');
 SET @cm003_sql = CONCAT(
   'INSERT INTO cm003_sorunlar ',
   'SELECT ''K03'', CONCAT(''Ayni kullanicida ayni sayilan adlar (kural: ', @cm003_kural, '); UNIQUE(KullaniciID, Ad) eklenemez''), ',
   '       COUNT(*), GROUP_CONCAT(o SEPARATOR '' | '') ',
   '  FROM (SELECT CONCAT(''Kullanici='', ka.KullaniciID, '' Adlar: '', GROUP_CONCAT(CONCAT('''''''', ', @cm003_ad, ', '''''''') SEPARATOR '', '')) o ',
   '          FROM KullaniciAliskanliklari ka LEFT JOIN Aliskanliklar a ON a.AliskanlikID = ka.AliskanlikID ',
-  '         WHERE ', @cm003_ad, ' IS NOT NULL ',
+  '         WHERE ', @cm003_ad, ' IS NOT NULL AND ', @cm003_005, ' ',
   '         GROUP BY ka.KullaniciID, (CONVERT(', @cm003_ad, ' USING ', @cm003_karakter, ') COLLATE ', @cm003_kural, ') ',
   '        HAVING COUNT(*) > 1) d');
 PREPARE cm003_st FROM @cm003_sql;
@@ -205,7 +211,7 @@ BEGIN
 
   IF NOT EXISTS (SELECT 1 FROM information_schema.STATISTICS
                   WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'kullanicialiskanliklari'
-                    AND INDEX_NAME = 'UQ_KA_Kullanici_Ad') THEN
+                    AND INDEX_NAME IN ('UQ_KA_Kullanici_Ad', 'UQ_KA_Kullanici_AktifAd')) THEN
     SET v_degisiklik = CONCAT(v_degisiklik, IF(v_degisiklik = '', '', ', '),
       'ADD UNIQUE KEY UQ_KA_Kullanici_Ad (KullaniciID, Ad)');
   END IF;

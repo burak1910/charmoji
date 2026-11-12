@@ -20,7 +20,8 @@
 --
 -- Ön koşullar:
 --   1. 003 uygulanmış olmalı; KullaniciAliskanliklari'nda Ad/StatTuru/Puan
---      boş satır olmamalı; UQ_KA_Kullanici_Ad bulunmalı (betik denetler).
+--      boş satır olmamalı; UQ_KA_Kullanici_Ad (003) ya da onun yerini alan
+--      UQ_KA_Kullanici_AktifAd (005) bulunmalı (betik denetler).
 --   2. PHP kodu Aliskanliklar tablosunu ve AliskanlikID'yi artık
 --      KULLANMIYOR olmalı (bkz. README "003 sonrası PHP değişiklikleri").
 --   3. Tam yedek alınmış olmalı:
@@ -70,8 +71,8 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.STATISTICS
                   WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'kullanicialiskanliklari'
-                    AND INDEX_NAME = 'UQ_KA_Kullanici_Ad') THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '004 DURDU: UQ_KA_Kullanici_Ad yok (003 tamamlanmamis); hicbir sey degistirilmedi.';
+                    AND INDEX_NAME IN ('UQ_KA_Kullanici_Ad', 'UQ_KA_Kullanici_AktifAd')) THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '004 DURDU: UQ_KA_Kullanici_Ad / UQ_KA_Kullanici_AktifAd yok (003 tamamlanmamis); hicbir sey degistirilmedi.';
   END IF;
 
   DROP TRIGGER IF EXISTS TRG_KA_EskiKodUyumu;

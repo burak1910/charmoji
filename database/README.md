@@ -8,12 +8,13 @@ sütunlardan türetildi. Tek doğrudan kanıt, eskiden repoda takipli olan
 
 ```
 database/
-├── schema.sql                     sıfırdan kurulum (= 001 + 002 + 003)
+├── schema.sql                     sıfırdan kurulum (= 001 + 002 + 003 + 005)
 ├── seed.sql                       geliştirme verisi
 ├── migrations/
 │   ├── 001_baseline.sql           bugünkü kodun beklediği şema
 │   ├── 002_kisitlar.sql           UNIQUE / FK / CHECK / indeksler (veri silmez)
-│   └── 003_kullaniciya_ozel_aliskanliklar.sql   alışkanlıkları kullanıcıya özel yapar (veri taşır, silmez)
+│   ├── 003_kullaniciya_ozel_aliskanliklar.sql   alışkanlıkları kullanıcıya özel yapar (veri taşır, silmez)
+│   └── 005_gorev_kurallari.sql    görev kuralları: aktif ad benzersizliği, arşiv, geri alma verisi, meydan okuma türü (veri silmez)
 └── araclar/                       ELLE çalıştırılan, otomatik akışta OLMAYAN betikler
     ├── tekrar_temizle.sql         002'yi durduran tekrar/sahipsiz satırları temizler (VERİ SİLER, yedekleyerek)
     └── 004_ortak_aliskanliklari_kaldir.sql      eski ortak tabloyu kaldırır (GERİ ALINAMAZ)
@@ -87,11 +88,14 @@ Tarayıcıda `http://127.0.0.1:8000/view/index.php` açılır; kayıt `view/regi
 | Deneme Kahraman | `deneme@charmoji.local` | `Charmoji123!` | 500 altın, 3 alışkanlık (seed'in ilk çalıştığı günün bir gün öncesinde işaretli), Büyücü Şapkası takılı |
 | Ayşe Test       | `ayse@charmoji.local`   | `Charmoji123!` | 120 altın, 1 alışkanlık |
 
-İkisi arkadaş (kabul edilmiş). Ayrıca 2 görev tanımı (`Günlük Giriş`, `3 Alışkanlık Tamamla`)
-ve `avatar_renderer.php`'nin adıyla çizdiği 5 market eşyası eklenir. `seed.sql` tekrar
-çalıştırılabilir: var olan kullanıcı, eşya, görev, alışkanlık, envanter ve arkadaşlık
-satırlarını yeniden eklemez; takip kaydını yalnızca hiç kaydı olmayan alışkanlığa ekler
-(başka bir günde çalıştırılsa da yeni satır eklemez). Var olan satırları değiştirmez.
+İkisi arkadaş (kabul edilmiş). Ayrıca 2 meydan okuma tanımı (`Günlük Giriş` türü `giris`,
+`3 Görev Tamamla` türü `gorev_tamamlama`) ve `avatar_renderer.php`'nin adıyla çizdiği 5 market
+eşyası eklenir. `seed.sql` eski ortak `Aliskanliklar` tablosunu kullanmaz (004 sonrası da
+çalışır) ve tarihleri oyunun gün sınırına göre (`SET time_zone = '+03:00'`) hesaplar. Tekrar
+çalıştırılabilir: var olan kullanıcı, eşya, meydan okuma, görev (aynı adlı aktif ya da
+arşivlenmiş), envanter ve arkadaşlık satırlarını yeniden eklemez; takip kaydını yalnızca hiç
+kaydı olmayan göreve ekler (başka bir günde çalıştırılsa da yeni satır eklemez). Var olan
+satırları değiştirmez.
 
 ## Migration'ları çalıştıran kullanıcının yetkileri
 
@@ -132,10 +136,12 @@ yalnızca ek savunmadır.
 
 ## Mevcut kuruluma migration uygulama
 
-Sıra: **001 → 002 → 003**. Üçü de tekrar çalıştırılabilir; uygulananlar `SemaGecmisi`
-tablosuna yazılır (`SELECT * FROM SemaGecmisi;`). 002 ve 003'ün daha eski bir sürümünü
-uyguladıysanız ikisini yeniden çalıştırın: StatTuru CHECK'ini sondaki boşluğu da reddeden
-sürüme günceller, başka bir şeyi değiştirmez.
+Sıra: **001 → 002 → 003 → 005** (004 bir migration değil, elle çalıştırılan araçtır; aşağıya
+bakın). Hepsi tekrar çalıştırılabilir; uygulananlar `SemaGecmisi` tablosuna yazılır
+(`SELECT * FROM SemaGecmisi;`). 002 ve 003'ün daha eski bir sürümünü uyguladıysanız ikisini
+yeniden çalıştırın: StatTuru CHECK'ini sondaki boşluğu da reddeden sürüme günceller, başka bir
+şeyi değiştirmez. 005'ten sonra 003 yeniden çalıştırılırsa `UQ_KA_Kullanici_Ad`'ı geri eklemez
+ve arşivlenmiş aynı adlı görevleri sorun saymaz. 005, 004'ten önce de sonra da çalışır.
 
 ```bash
 # 0) Yedek
@@ -150,7 +156,18 @@ mysql -uroot --default-character-set=utf8mb4 charmoji < database/migrations/002_
 
 # 3) Kullanıcıya özel alışkanlıklar. Veriyi kopyalar, hiçbir şey silmez.
 mysql -uroot --default-character-set=utf8mb4 charmoji < database/migrations/003_kullaniciya_ozel_aliskanliklar.sql
+
+# 5) Görev kuralları (Aşama 2 PHP kodu bunu gerektirir). Sütun ekler, hiçbir şey silmez.
+#    Aynı oyuncunun AKTİF görevlerinde yeni kurala göre aynı sayılan iki ad varsa listeyi basar
+#    ve hiçbir şey değiştirmeden durur.
+mysql -uroot --default-character-set=utf8mb4 charmoji < database/migrations/005_gorev_kurallari.sql
 ```
+
+**Dağıtım sırası (Aşama 2):** önce 005, sonra PHP kodu. Aşama 2 kodu 005'in sütunlarını
+(`AktifAd`, `ArsivZamani`, `TakipKayitlari.KazanilanXP` …, `GorevTanimlari.Tur`) kullanır;
+005 uygulanmamış veritabanında görev sayfaları hata verir. 005 eski (Aşama 1) kodu bozmaz:
+eski kod bu sütunları okumaz; tek fark, eski kodun silme işleminin satırı gerçekten silmesi ve
+meydan okumayı başlıktan bulmasıdır (geçiş süresince zararsız).
 
 ### Migration'lar iki biçimde çalıştırılır
 
@@ -222,6 +239,16 @@ adet, örnek ID'ler). Bu durumda:
 * `Aliskanliklar.Ad` 100 karakterden uzunsa ("Ad 100 karakterden uzun") 003 durur; adı kısaltın.
 * `003_DURDU_004_zaten_uygulanmis...`: 004 sonrası 003 bir daha çalıştırılmaz.
 
+### 005 "005_DURDU" ile durursa
+
+* `005_DURDU_once_003_uygulanmali...`: önce 003.
+* `005_DURDU_veri_sorunu_var...`: basılan listede *"Ayni kullanicinin aktif gorevlerinde ayni
+  sayilan adlar"* varsa bir oyuncunun iki aktif görevi yeni kurala (`utf8mb4_tr_0900_ai_ci`:
+  Türkçe büyük/küçük harf duyarsız; ör. `'KITAP'` ile `'kıtap'`) göre aynı sayılıyordur. Birini
+  yeniden adlandırın ya da `AktifMi = 0` yapın, 005'i yeniden çalıştırın. Hiçbir şey değişmemiştir.
+* Yordamın içinde durulduysa `cm005_uygula`, `cm005_sql` kalabilir; dosya bir sonraki
+  çalıştırmada siler.
+
 ## Migration ve araç listesi
 
 | Dosya | Ne yapar | Veri siler mi? | Otomatik mi? |
@@ -229,6 +256,7 @@ adet, örnek ID'ler). Bu durumda:
 | `migrations/001_baseline.sql` | Kodun beklediği tablolar (`CREATE TABLE IF NOT EXISTS`), eksikse `AvatarVerisi` | Hayır | Evet |
 | `migrations/002_kisitlar.sql` | UNIQUE, FK, CHECK, indeksler; `KullaniciStatlari.ToplamPuan` NOT NULL DEFAULT 0; `SonIslemTarihi` DATETIME ise DATE | Hayır (sorun varsa durur) | Evet |
 | `migrations/003_kullaniciya_ozel_aliskanliklar.sql` | `KullaniciAliskanliklari`'na Ad/StatTuru/Puan ekler ve doldurur; geçiş tetikleyicisi | Hayır | Evet |
+| `migrations/005_gorev_kurallari.sql` | `KullaniciAliskanliklari`: `AktifAd` (üretilmiş) + `UQ_KA_Kullanici_AktifAd` (eski `UQ_KA_Kullanici_Ad` yerine), `ArsivZamani`; `TakipKayitlari`: `KazanilanXP`, `StatTuru`, `OncekiSeri`, `OncekiSonIslemTarihi` (+ CHECK); `GorevTanimlari.Tur` (+ CHECK) doldurulur; seed başlığı `3 Alışkanlık Tamamla` → `3 Görev Tamamla` | Hayır (bir UNIQUE indeksi daha geniş olanıyla değiştirir; yalnızca o birebir başlığı yeniden adlandırır) | Evet |
 | `araclar/tekrar_temizle.sql` | 002'yi durduran satırları temizler | **Evet** (yedek tablolara kopyalayarak) | **Hayır — elle, `@onay` ile** |
 | `araclar/004_ortak_aliskanliklari_kaldir.sql` | `Aliskanliklar` tablosunu, `AliskanlikID` sütununu ve onu içeren tüm indeks/FK'leri, tetikleyiciyi kaldırır | **Evet — GERİ ALINAMAZ** | **Hayır — elle, `@onay` ile** |
 
@@ -239,25 +267,56 @@ adet, örnek ID'ler). Bu durumda:
 
 1. 003 uygulanmış ve en az bir süre sorunsuz çalışmış olmalı.
 2. PHP kodu aşağıdaki "003 sonrası PHP değişiklikleri" listesine göre güncellenmiş olmalı
-   (eski kod 004'ten sonra alışkanlık ekleyemez ve listeleyemez).
+   (eski kod 004'ten sonra alışkanlık ekleyemez ve listeleyemez). **Durum:** Aşama 2 kodu
+   (`claude/amazing-wright-ht2d7d`) bu koşulu sağlar; 004 sonrası şemada tüm güvenlik testleri
+   geçer (bkz. aşağıdaki "004 sonrası doğrulama"). Canlıda eski kod kalmadığından emin olun.
 3. Tam yedek alınmış olmalı.
 4. Betik `@onay='EVET-ALISKANLIKLAR-SILINSIN'` olmadan hiçbir şey yapmaz (istemci hatada
    devam etse bile).
 
-004'ten sonra `schema.sql` ve `seed.sql` de 004 sonrası duruma güncellenmelidir; ikisi de
-şu an geçiş için `Aliskanliklar` tablosunu içerir. 004'ten sonra 002 ve 003 yeniden
-çalıştırılmaz (ikisi de `AliskanlikID`'ye başvurur).
+004'ten sonra `schema.sql` 004 sonrası duruma güncellenmelidir (şu an geçiş için
+`Aliskanliklar` tablosunu, `AliskanlikID`'yi ve tetikleyiciyi içerir). `seed.sql` artık
+`Aliskanliklar`'a yazmaz; 004 sonrasında da olduğu gibi çalışır. 004'ten sonra 002 ve 003
+yeniden çalıştırılmaz (ikisi de `AliskanlikID`'ye başvurur); 005 çalıştırılabilir.
+
+**004 sonrası doğrulama (yapıldı, elle):** deponun bir kopyasında test kurulumuna
+`schema.sql` + `seed.sql` ardından `SET @onay='EVET-ALISKANLIKLAR-SILINSIN'; SOURCE
+database/araclar/004_ortak_aliskanliklari_kaldir.sql;` eklenerek `tests/guvenlik/calistir.sh`
+çalıştırıldı: tüm denetimler geçti. 004 otomatik akışa eklenmedi.
 
 ## Şema hakkında kararlar
 
-**Neden `schema.sql` = 001+002+003 (004 hariç)?** Bugünkü PHP kodu alışkanlıkları hâlâ
-`Aliskanliklar` ile JOIN'leyerek okuyor. Sıfırdan kurulan ortamın kod güncellenmeden de
-çalışması için eski tablo, `AliskanlikID` ve `TRG_KA_EskiKodUyumu` tetikleyicisi geçiş
-süresince tutuluyor. `mysqldump --no-data --routines --triggers` ile karşılaştırıldığında
-001→002→003 uygulanmış veritabanı ile `schema.sql` birebir aynıdır.
+**Neden `schema.sql` = 001+002+003+005 (004 hariç)?** PHP kodu artık `Aliskanliklar`'ı
+kullanmıyor, ama 004 geri alınamaz ve elle çalıştırılır. 004 uygulanana kadar eski kodun (ör.
+geri dönüş) sıfırdan kurulumda da çalışabilmesi için eski tablo, `AliskanlikID` ve
+`TRG_KA_EskiKodUyumu` tetikleyicisi tutuluyor. `mysqldump --no-data --routines --triggers` ile
+karşılaştırıldığında 001→002→003→005 uygulanmış veritabanı ile `schema.sql` birebir aynıdır.
+
+**Görev adı benzersizliği (S9) ve arşiv (S18) — 005.** Silinen görev arşivlenir (`AktifMi = 0`,
+`ArsivZamani`); XP, seri ve takip kayıtları yerinde kalır, 5 sn içinde geri getirilebilir
+(sunucu ağ payıyla 15 sn kabul eder). Ad yalnızca **aktif** görevler arasında benzersizdir:
+`AktifAd = IF(AktifMi = 1, Ad, NULL)` STORED üretilmiş sütunu ve `UNIQUE (KullaniciID,
+AktifAd)`; NULL'lar çakışmadığı için arşivlenmiş görevin adıyla yeni görev eklenebilir. Sütunun
+kuralı `utf8mb4_tr_0900_ai_ci`'dir: Türkçe büyük/küçük harf duyarsız (`'Kitap Oku'` =
+`'KİTAP OKU'`, `'KITAP'` ≠ `'kitap'`), ç ğ ı ö ş ü ayrı harf (`'Şınav'` ≠ `'Sınav'`), NO PAD.
+(MySQL 8.0'da `utf8mb4_tr_0900_as_ci` yoktur; `ai` Türkçe harfleri zaten ayırır, yalnızca
+Türkçede olmayan aksanları (é = e) eşit sayar.) PHP önce aynı kuralla sorgular (`AktifAd = ?`),
+yarışta UNIQUE 1062 döner ve "Bu adda bir görevin zaten var" gösterilir.
+
+**Geri alma verisi — 005.** `TakipKayitlari` her tamamlamada kazanılan XP'yi, XP'nin yazıldığı
+yeteneği ve tamamlama öncesi `Seri`/`SonIslemTarihi`'ni saklar. Geri alma bunları aynen geri
+yükler: XP kazanıldığı yetenekten düşülür (S19: yetenek sonradan değişse de), seri ve son tarih
+tamamlama öncesine döner; böylece aynı gün yeniden tamamlanınca seri yine artar (eski kodda
+`SonIslemTarihi` bugün kaldığı için artmıyordu). 005 öncesi satırlarda bu sütunlar NULL'dır;
+kod o durumda eski hesaba (seri − 1, önceki tamamlama günü) düşer.
+
+**Meydan okuma türü (S25) — 005.** `GorevTanimlari.Tur`: `giris` (o gün herhangi bir sekme
+açılınca tamamlanır) ya da `gorev_tamamlama` (o gün tamamlanan görev sayısı; geri alma 1
+azaltır, ödülü alınmışsa değişmez — S7). Kod artık başlık metnine (`'Günlük Giriş'`,
+`LIKE '%alışkanlık%'`) bakmaz. Yeni meydan okuma eklerken `Tur` zorunludur (NOT NULL + CHECK).
 
 **StatTuru: ENUM değil, CHECK + `utf8mb4_0900_bin`.** Geçerli değerler kodda yazıldığı gibi:
-`Zeka`, `Guc`, `Sosyallik`, `Disiplin`, `Yaraticilik` (`view/ortak/cekirdek.php:22` `YETENEKLER`, `view/gorevler.php:24` doğrulaması).
+`Zeka`, `Guc`, `Sosyallik`, `Disiplin`, `Yaraticilik` (`view/ortak/cekirdek.php:22` `YETENEKLER`, `view/ortak/gorev_islemleri.php` `gorev_yetenegi_dogrula()`).
 * `utf8mb4_unicode_ci` harf ve aksan duyarsız ve PAD SPACE'tir: `'güç'`, `'GUC'`, `'Guc '`
   normal karşılaştırmada `'Guc'`a eşittir. Kod ise birebir karşılaştırma yapıyor.
   `utf8mb4_0900_bin` ikili ve NO PAD'dir; bu yazımların hepsini reddeder. (`utf8mb4_bin`
@@ -274,8 +333,8 @@ değer, tetikleyici `KullaniciAliskanliklari`'na yazarken reddedilir.
 
 | Tablo | UNIQUE | FK (ON DELETE) | Neden |
 |---|---|---|---|
-| KullaniciStatlari | (KullaniciID, StatTuru) | Kullanicilar (CASCADE) | `view/ortak/cekirdek.php:234` INSERT IGNORE |
-| KullaniciAliskanliklari | (KullaniciID, AliskanlikID), 003: (KullaniciID, Ad) | Kullanicilar (CASCADE), Aliskanliklar (RESTRICT) | `view/gorevler.php:43` INSERT IGNORE |
+| KullaniciStatlari | (KullaniciID, StatTuru) | Kullanicilar (CASCADE) | `view/ortak/cekirdek.php:331` INSERT IGNORE |
+| KullaniciAliskanliklari | (KullaniciID, AliskanlikID); 005: (KullaniciID, AktifAd) — 003'teki (KullaniciID, Ad) yerine | Kullanicilar (CASCADE), Aliskanliklar (RESTRICT) | Eski kodun INSERT IGNORE'u; aktif görevlerde aynı ad (S9) |
 | TakipKayitlari | (KullaniciAliskanlikID, Tarih) | KullaniciAliskanliklari (CASCADE) | INSERT IGNORE; aynı gün çift puan. CASCADE çünkü alışkanlık doğrudan silinir |
 | KullaniciEnvanteri | (KullaniciID, EsyaID) | Kullanicilar (CASCADE), MarketEsyalari (RESTRICT) | Satın alma yarışı |
 | KullaniciGunlukGorevleri | (KullaniciID, Tarih, GorevTanimID) | Kullanicilar (CASCADE), GorevTanimlari (RESTRICT) | Sayfa iki kez açılırsa görevler çiftlenir, ödül iki kez alınır |
@@ -285,23 +344,26 @@ değer, tetikleyici `KullaniciAliskanliklari`'na yazarken reddedilir.
 eklemez (ör. eski kurulumdaki `UQ_KA`, `UQ_Stat`, `UQ_TK`, `UQ_Env` kabul edilir); aynı
 sütunlarda UNIQUE olmayan bir indeks varsa onu UNIQUE ile değiştirir.
 
-## 003 sonrası PHP değişiklikleri (Özellik ajanı için)
+## 003 sonrası PHP değişiklikleri (TAMAMLANDI — Dalga 2 / Aşama 2)
 
 003 uygulandıktan sonra kod, alışkanlığın adını/stat türünü/puanını
-`KullaniciAliskanliklari`'ndan okumalı ve yazmalı. Tetikleyici sayesinde eski kod çalışmaya
-devam eder, ama kullanıcıya özellik ancak bu değişikliklerle devreye girer ve 004 ancak
-bunlardan sonra uygulanabilir. `view/userpage.php` artık yalnızca Karargah'a yönlendirir; kod `view/karargah.php`, `view/gorevler.php`, `view/ortak/cekirdek.php` ve `view/ajax_islem.php` dosyalarına taşındı. Satır numaraları `claude/amazing-wright-ht2d7d` dalının bu commit'teki durumuna göredir.
+`KullaniciAliskanliklari`'ndan okumalı ve yazmalıydı. **Aşama 2'de yapıldı:** görev iş
+kuralları `view/ortak/gorev_islemleri.php`'de toplandı; okuma `view/ortak/cekirdek.php`
+`GOREV_SECIMI` / `aktif_gorevler()` ile, yazma (ekle, düzenle, arşivle, geri getir, tamamla,
+geri al) yalnızca kullanıcıya özel sütunlarla yapılır. `grep -rnwE "Aliskanliklar|AliskanlikID"
+service view config` yalnızca açıklama satırlarını bulur. Aşağıdaki tablo kayıt için
+(geçişten önceki durum) bırakıldı:
 
-| Dosya:satır | Bugün | Olması gereken |
+| Dosya:satır (geçiş öncesi) | O zaman | Şimdi |
 |---|---|---|
-| `view/gorevler.php:35-41` (görev ekleme) | `SELECT AliskanlikID FROM Aliskanliklar WHERE Ad = ?`, yoksa `INSERT INTO Aliskanliklar (Ad, StatTuru, Puan)` | Kaldırılmalı; ortak tabloya artık yazılmaz. |
-| `view/gorevler.php:43-44` | `INSERT IGNORE INTO KullaniciAliskanliklari (KullaniciID, AliskanlikID, BaslangicTarihi) VALUES (?, ?, CURDATE())` (hazır ifade, `AliskanlikID` ile) | `INSERT IGNORE INTO KullaniciAliskanliklari (KullaniciID, Ad, StatTuru, Puan, BaslangicTarihi) VALUES (?, ?, ?, ?, CURDATE())`. Aynı kullanıcıda aynı ad varsa UQ_KA_Kullanici_Ad yüzünden eklenmez (`affected_rows = 0` → kullanıcıya mesaj). |
-| `view/ortak/cekirdek.php:306-312` (`aktif_gorevler()`) | `SELECT KA.KullaniciAliskanlikID, A.Ad, A.StatTuru, A.Puan, ... FROM KullaniciAliskanliklari KA JOIN Aliskanliklar A ON KA.AliskanlikID = A.AliskanlikID ...` | `SELECT KA.KullaniciAliskanlikID, KA.Ad, KA.StatTuru, KA.Puan, KA.Seri, (...) AS BugunYapildi FROM KullaniciAliskanliklari KA WHERE KA.KullaniciID = ? AND KA.AktifMi = 1` (JOIN yok) |
-| `view/ajax_islem.php:280-283` | `SELECT KA.Seri, KA.SonIslemTarihi, A.Puan, A.StatTuru FROM KullaniciAliskanliklari KA JOIN Aliskanliklar A ON KA.AliskanlikID = A.AliskanlikID WHERE ...` | `SELECT KA.Seri, KA.SonIslemTarihi, KA.Puan, KA.StatTuru FROM KullaniciAliskanliklari KA WHERE KA.KullaniciAliskanlikID = ? AND KA.KullaniciID = ?` |
-| `view/karakter.php:22-24` | `SELECT A.StatTuru, COUNT(*) ... FROM KullaniciAliskanliklari KA JOIN Aliskanliklar A ON KA.AliskanlikID = A.AliskanlikID ... GROUP BY A.StatTuru` (yetenek başına görev sayısı) | `SELECT KA.StatTuru, COUNT(*) ... FROM KullaniciAliskanliklari KA WHERE KA.KullaniciID = ? AND KA.AktifMi = 1 GROUP BY KA.StatTuru` (JOIN yok) |
+| `view/gorevler.php:35-41` (görev ekleme) | `SELECT AliskanlikID FROM Aliskanliklar WHERE Ad = ?`, yoksa `INSERT INTO Aliskanliklar (Ad, StatTuru, Puan)` | Kaldırıldı; ortak tabloya yazılmıyor. |
+| `view/gorevler.php:43-44` | `INSERT IGNORE INTO KullaniciAliskanliklari (KullaniciID, AliskanlikID, BaslangicTarihi) VALUES (?, ?, CURDATE())` | `gorev_ekle()`: transaction + oyuncu satırı kilidi, sınır (20) ve aktif ad denetimi, `INSERT INTO KullaniciAliskanliklari (KullaniciID, Ad, StatTuru, Puan, BaslangicTarihi) VALUES (?, ?, ?, ?, ?)` (tarih PHP'den, S1); 1062 → `ad_ayni`. |
+| `view/ortak/cekirdek.php:306-312` (`aktif_gorevler()`) | `... FROM KullaniciAliskanliklari KA JOIN Aliskanliklar A ON ...` | `GOREV_SECIMI`: `KA.Ad, KA.StatTuru, KA.Puan, ...` + bugünkü `TakipKayitlari` (LEFT JOIN), JOIN'siz. |
+| `view/ajax_islem.php:280-283` | `SELECT KA.Seri, KA.SonIslemTarihi, A.Puan, A.StatTuru ... JOIN Aliskanliklar ...` | `gorev_tamamla()` / `gorev_geri_al()`: `GOREV_SECIMI ... WHERE KA.KullaniciAliskanlikID = ? AND KA.KullaniciID = ? AND KA.AktifMi = 1 FOR UPDATE`. |
+| `view/karakter.php:22-24` | `SELECT A.StatTuru, COUNT(*) ... JOIN Aliskanliklar ... GROUP BY A.StatTuru` | `SELECT KA.StatTuru, COUNT(*) FROM KullaniciAliskanliklari KA WHERE KA.KullaniciID = ? AND KA.AktifMi = 1 GROUP BY KA.StatTuru`. |
 
-Başka hiçbir PHP dosyası `Aliskanliklar` tablosuna veya `AliskanlikID` sütununa başvurmuyor
-(`grep -rnwE "Aliskanliklar|AliskanlikID" service view config` yalnızca yukarıdaki satırları bulur).
+Tetikleyici (`TRG_KA_EskiKodUyumu`) yalnızca eski kodun `AliskanlikID` ile yaptığı INSERT'te
+devreye girer; yeni kod `Ad` verdiği için hiç tetiklemez. 004 ile kaldırılabilir.
 
 ### 002 sonrası önerilen PHP düzeltmeleri (main'de hâlâ açık olanlar)
 
@@ -315,7 +377,7 @@ düz `INSERT`'leri hataya düşürür; veri bozulmaz ama kullanıcı hata göreb
 | `view/ajax_islem.php:205-222` (ödül alma) | Ödül önce okunup sonra veriliyor; eşzamanlı iki istekte ödül iki kez alınabilir | Önce `UPDATE KullaniciGunlukGorevleri SET OdulAlindiMi = 1 WHERE KullaniciGorevID = ? AND KullaniciID = ? AND TamamlandiMi = 1 AND OdulAlindiMi = 0`, `affected_rows = 1` ise bakiyeyi artır |
 
 Giderilenler (artık geçerli değil): günlük görevlerin düz `INSERT` ile eklenmesi
-(`view/ortak/cekirdek.php:221` `INSERT IGNORE` kullanıyor) ve `service/FriendManager.php`
+(`view/ortak/cekirdek.php:297` `INSERT IGNORE` kullanıyor) ve `service/FriendManager.php`
 sorgularında `AvatarVerisi` eksikliği (topluluk/istek/arkadaş sorguları artık seçiyor).
 
 ## Varsayımlar, sınırlar ve ortam notları

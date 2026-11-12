@@ -1,8 +1,10 @@
 -- =====================================================================
 -- seed.sql  —  GELİŞTİRME verisi (üretimde çalıştırmayın)
 -- ---------------------------------------------------------------------
--- Hedef şema: schema.sql (= migration 001+002+003). Tekrar çalıştırılabilir:
--- var olan kayıtlar yeniden eklenmez, mevcut veri silinmez/değiştirilmez.
+-- Hedef şema: schema.sql (= migration 001+002+003+005). Eski ortak
+-- Aliskanliklar tablosunu kullanmaz; araclar/004 sonrasında da çalışır.
+-- Tekrar çalıştırılabilir: var olan kayıtlar yeniden eklenmez, mevcut veri
+-- silinmez/değiştirilmez.
 --
 -- Deneme kullanıcıları (düz şifreler README.md'de de yazılı):
 --   deneme@charmoji.local / Charmoji123!   (Ad: Deneme Kahraman)
@@ -12,16 +14,18 @@
 -- =====================================================================
 
 SET NAMES utf8mb4;
+-- CURDATE() oyunun gün sınırına (S1: Europe/Istanbul, UTC+3) göre hesaplansın.
+SET time_zone = '+03:00';
 
--- Günlük görev tanımları ------------------------------------------------
--- userpage.php : Baslik = 'Günlük Giriş' olan görev sayfa açılınca tamamlanır.
--- ajax_islem.php: Baslik LIKE '%alışkanlık%' olan görevler her işaretlemede +1 ilerler.
-INSERT INTO GorevTanimlari (Baslik, Aciklama, OdulPara, HedefSayi, Ikon)
+-- Günlük meydan okuma tanımları (Tur, S25) --------------------------------
+-- giris          : o gün herhangi bir sekme açılınca tamamlanır (view/ortak/cekirdek.php).
+-- gorev_tamamlama: o gün tamamlanan her görev ilerlemeyi 1 artırır, geri alma 1 azaltır.
+INSERT INTO GorevTanimlari (Baslik, Aciklama, OdulPara, HedefSayi, Ikon, Tur)
 SELECT * FROM (
   SELECT 'Günlük Giriş' AS Baslik, 'Bugün Charmoji''ye giriş yap.' AS Aciklama,
-         10.00 AS OdulPara, 1 AS HedefSayi, 'fa-right-to-bracket' AS Ikon
+         10.00 AS OdulPara, 1 AS HedefSayi, 'fa-right-to-bracket' AS Ikon, 'giris' AS Tur
   UNION ALL
-  SELECT '3 Alışkanlık Tamamla', 'Bugün üç alışkanlığını işaretle.', 25.00, 3, 'fa-list-check'
+  SELECT '3 Görev Tamamla', 'Bugün üç görevini tamamla.', 25.00, 3, 'fa-list-check', 'gorev_tamamlama'
 ) yeni
 WHERE NOT EXISTS (SELECT 1 FROM GorevTanimlari g WHERE g.Baslik = yeni.Baslik);
 
@@ -45,7 +49,7 @@ INSERT IGNORE INTO Kullanicilar (Ad, Eposta, SifreHash, Bakiye, AvatarVerisi) VA
   ('Ayşe Test', 'ayse@charmoji.local',
    '$2y$10$9.HpigFxWGkm.OxnRwC7..4Y10CEcJodHLY9Ro0gL77Gdqd0itvoW', 120.00, NULL);
 
--- Statlar (userpage.php da eksikleri 0 ile ekler) ----------------------
+-- Statlar (view/ortak/cekirdek.php da eksikleri 0 ile ekler) ----------
 INSERT IGNORE INTO KullaniciStatlari (KullaniciID, StatTuru, ToplamPuan)
 SELECT k.KullaniciID, s.StatTuru, s.Puan
   FROM Kullanicilar k
@@ -60,35 +64,30 @@ SELECT k.KullaniciID, s.StatTuru, 0
         UNION ALL SELECT 'Disiplin' UNION ALL SELECT 'Yaraticilik') s
  WHERE k.Eposta = 'ayse@charmoji.local';
 
--- Alışkanlıklar ---------------------------------------------------------
--- Geçiş döneminde eski kod alışkanlıkları Aliskanliklar ile JOIN'leyerek
--- listelediği için ortak tabloya da kayıt açılır ve AliskanlikID verilir.
--- Kullanıcıya özel değerler (Ad/StatTuru/Puan) KullaniciAliskanliklari'nda.
-INSERT IGNORE INTO Aliskanliklar (Ad, StatTuru, Puan) VALUES
-  ('Kitap Oku', 'Zeka', 10),
-  ('Şınav Çek', 'Guc', 10),
-  ('Erken Kalk', 'Disiplin', 10);
-
-INSERT IGNORE INTO KullaniciAliskanliklari
-  (KullaniciID, AliskanlikID, Ad, StatTuru, Puan, BaslangicTarihi, Seri, SonIslemTarihi)
-SELECT k.KullaniciID, a.AliskanlikID, a.Ad, a.StatTuru, a.Puan,
-       CURDATE() - INTERVAL 7 DAY, 1, CURDATE() - INTERVAL 1 DAY
+-- Görevler (alışkanlıklar): kullanıcıya özel Ad/StatTuru/Puan ------------
+-- Aynı adlı görev (aktif ya da arşivlenmiş) varsa yeniden eklenmez.
+INSERT INTO KullaniciAliskanliklari
+  (KullaniciID, Ad, StatTuru, Puan, BaslangicTarihi, Seri, SonIslemTarihi)
+SELECT k.KullaniciID, y.Ad, y.StatTuru, 10, CURDATE() - INTERVAL 7 DAY, 1, CURDATE() - INTERVAL 1 DAY
   FROM Kullanicilar k
-  JOIN Aliskanliklar a ON a.Ad IN ('Kitap Oku', 'Şınav Çek', 'Erken Kalk')
- WHERE k.Eposta = 'deneme@charmoji.local';
+  JOIN (SELECT 'Kitap Oku' AS Ad, 'Zeka' AS StatTuru, 1 AS Sira UNION ALL SELECT 'Şınav Çek', 'Guc', 2
+        UNION ALL SELECT 'Erken Kalk', 'Disiplin', 3) y
+ WHERE k.Eposta = 'deneme@charmoji.local'
+   AND NOT EXISTS (SELECT 1 FROM KullaniciAliskanliklari x WHERE x.KullaniciID = k.KullaniciID AND x.Ad = y.Ad)
+ ORDER BY y.Sira;
 
-INSERT IGNORE INTO KullaniciAliskanliklari
-  (KullaniciID, AliskanlikID, Ad, StatTuru, Puan, BaslangicTarihi)
-SELECT k.KullaniciID, a.AliskanlikID, a.Ad, a.StatTuru, a.Puan, CURDATE()
+INSERT INTO KullaniciAliskanliklari (KullaniciID, Ad, StatTuru, Puan, BaslangicTarihi)
+SELECT k.KullaniciID, 'Kitap Oku', 'Zeka', 10, CURDATE()
   FROM Kullanicilar k
-  JOIN Aliskanliklar a ON a.Ad = 'Kitap Oku'
- WHERE k.Eposta = 'ayse@charmoji.local';
+ WHERE k.Eposta = 'ayse@charmoji.local'
+   AND NOT EXISTS (SELECT 1 FROM KullaniciAliskanliklari x WHERE x.KullaniciID = k.KullaniciID AND x.Ad = 'Kitap Oku');
 
 -- Dünkü işaretlemeler (seri 1 olarak görünsün) -------------------------
 -- Yalnızca hiç takip kaydı olmayan alışkanlıklara eklenir; böylece seed
 -- başka bir günde yeniden çalıştırılınca yeni satır eklemez.
-INSERT IGNORE INTO TakipKayitlari (KullaniciAliskanlikID, Tarih, TamamlandiMi)
-SELECT ka.KullaniciAliskanlikID, ka.SonIslemTarihi, 1
+INSERT IGNORE INTO TakipKayitlari
+  (KullaniciAliskanlikID, Tarih, TamamlandiMi, KazanilanXP, StatTuru, OncekiSeri, OncekiSonIslemTarihi)
+SELECT ka.KullaniciAliskanlikID, ka.SonIslemTarihi, 1, 10, ka.StatTuru, 0, NULL
   FROM KullaniciAliskanliklari ka
   JOIN Kullanicilar k ON k.KullaniciID = ka.KullaniciID
  WHERE k.Eposta = 'deneme@charmoji.local'

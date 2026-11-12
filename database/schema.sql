@@ -1,16 +1,17 @@
 -- =====================================================================
 -- schema.sql  —  Charmoji şeması, SIFIRDAN KURULUM için tek dosya
 -- ---------------------------------------------------------------------
--- İçerik: migrations/001 + 002 + 003 uygulandıktan sonraki şemanın
+-- İçerik: migrations/001 + 002 + 003 + 005 uygulandıktan sonraki şemanın
 -- birebir aynısı (mysqldump --no-data --routines --triggers ile karşılaştırılarak doğrulandı;
 -- bkz. database/README.md).
 --
 -- Bilerek İÇERİLEN geçiş parçaları (araclar/004 ile kaldırılacak):
 --   * Aliskanliklar (eski ortak tablo), KullaniciAliskanliklari.AliskanlikID,
 --     FK_KA_Aliskanlik, UQ_KA_Kullanici_Aliskanlik, TRG_KA_EskiKodUyumu.
---   Bunlar, PHP kodu kullanıcıya özel alışkanlıklara geçene kadar mevcut
---   kodun sıfırdan kurulumda da çalışması için tutuluyor. PHP güncellenip
---   004 uygulandıktan sonra bu dosya da 004 sonrası hâle getirilmeli.
+--   PHP kodu artık bunları kullanmıyor (yalnızca kullanıcıya özel sütunlar);
+--   eski kodun (ör. geri dönüş) sıfırdan kurulumda da çalışabilmesi için
+--   004 elle uygulanana kadar tutuluyor. 004 uygulandıktan sonra bu dosya da
+--   004 sonrası hâle getirilmeli.
 --
 -- StatTuru kısıtı: CHECK + utf8mb4_0900_bin (ENUM değil). Gerekçe:
 --   * Sütun VARCHAR kalır; PHP tarafı düz metin karşılaştırmaya devam eder
@@ -88,15 +89,20 @@ CREATE TABLE KullaniciAliskanliklari (
   KullaniciID           INT          NOT NULL,
   AliskanlikID          INT          NULL COMMENT 'ESKI: ortak Aliskanliklar tablosu; 004 ile kaldirilir, yeni kod doldurmaz',
   Ad                    VARCHAR(100) NOT NULL COMMENT 'Kullaniciya ozel aliskanlik adi',
+  AktifAd               VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_tr_0900_ai_ci
+                        GENERATED ALWAYS AS (IF(AktifMi = 1, Ad, NULL)) STORED
+                        COMMENT 'Yalnizca aktif gorevde Ad; ad benzersizligi (S9) bu sutunda',
   StatTuru              VARCHAR(20)  NOT NULL COMMENT 'Zeka, Guc, Sosyallik, Disiplin, Yaraticilik',
   Puan                  INT          NOT NULL DEFAULT 10 COMMENT 'Isaretleme basina taban puan',
   BaslangicTarihi       DATE         NOT NULL,
   AktifMi               TINYINT(1)   NOT NULL DEFAULT 1,
+  ArsivZamani           DATETIME     NULL DEFAULT NULL COMMENT 'Silme = arsivleme (AktifMi = 0) zamani; Geri al suresi buna gore',
   Seri                  INT          NOT NULL DEFAULT 0,
   SonIslemTarihi        DATE         DEFAULT NULL,
   PRIMARY KEY (KullaniciAliskanlikID),
-  UNIQUE KEY UQ_KA_Kullanici_Ad (KullaniciID, Ad),
   UNIQUE KEY UQ_KA_Kullanici_Aliskanlik (KullaniciID, AliskanlikID),
+  -- 005: ad yalnızca AKTİF görevler arasında benzersiz (Türkçe, büyük/küçük harf duyarsız)
+  UNIQUE KEY UQ_KA_Kullanici_AktifAd (KullaniciID, AktifAd),
   KEY FK_KA_Aliskanlik (AliskanlikID),
   CONSTRAINT FK_KA_Aliskanlik FOREIGN KEY (AliskanlikID)
     REFERENCES Aliskanliklar (AliskanlikID) ON DELETE RESTRICT,
@@ -112,10 +118,17 @@ CREATE TABLE TakipKayitlari (
   KullaniciAliskanlikID INT        NOT NULL,
   Tarih                 DATE       NOT NULL,
   TamamlandiMi          TINYINT(1) NOT NULL DEFAULT 0,
+  -- 005: tamamlama anının verisi; geri alma bunlarla yapılır (eski satırlarda NULL)
+  KazanilanXP           INT         NULL DEFAULT NULL COMMENT 'Bu tamamlamada kazanilan XP (geri almada aynen dusulur)',
+  StatTuru              VARCHAR(20) NULL DEFAULT NULL COMMENT 'XP nin yazildigi yetenek (tamamlama anindaki)',
+  OncekiSeri            INT         NULL DEFAULT NULL COMMENT 'Tamamlamadan onceki Seri (geri almada geri yuklenir)',
+  OncekiSonIslemTarihi  DATE        NULL DEFAULT NULL COMMENT 'Tamamlamadan onceki SonIslemTarihi',
   PRIMARY KEY (KayitID),
   UNIQUE KEY UQ_TK_KA_Tarih (KullaniciAliskanlikID, Tarih),
   CONSTRAINT FK_TK_KA FOREIGN KEY (KullaniciAliskanlikID)
-    REFERENCES KullaniciAliskanliklari (KullaniciAliskanlikID) ON DELETE CASCADE
+    REFERENCES KullaniciAliskanliklari (KullaniciAliskanlikID) ON DELETE CASCADE,
+  CONSTRAINT CHK_TK_StatTuru
+    CHECK ((StatTuru IS NULL) OR ((StatTuru COLLATE utf8mb4_0900_bin) IN ('Zeka','Guc','Sosyallik','Disiplin','Yaraticilik')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Arkadaşlıklar: iki kişi arasında (yönden bağımsız) tek satır ---------
@@ -169,7 +182,9 @@ CREATE TABLE GorevTanimlari (
   OdulPara     DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   HedefSayi    INT           NOT NULL DEFAULT 1,
   Ikon         VARCHAR(100)  DEFAULT NULL COMMENT 'Font Awesome ikon sınıfı',
-  PRIMARY KEY (GorevTanimID)
+  Tur          VARCHAR(20)   NOT NULL COMMENT 'Meydan okuma turu: giris | gorev_tamamlama (S25)',
+  PRIMARY KEY (GorevTanimID),
+  CONSTRAINT CHK_GT_Tur CHECK ((Tur COLLATE utf8mb4_0900_bin) IN ('giris','gorev_tamamlama'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Kullanıcının günlük görevleri: kullanıcı+gün+görev başına tek satır --
@@ -206,9 +221,10 @@ BEGIN
 END$$
 DELIMITER ;
 
--- Bu şema 001-003 migration'larına denktir; sonraki migration'lar
+-- Bu şema 001, 002, 003 ve 005 migration'larına denktir; sonraki migration'lar
 -- doğru yerden başlasın diye kayıtlar eklenir.
 INSERT INTO SemaGecmisi (Surum, Aciklama) VALUES
   ('001', 'Başlangıç şeması (koddan türetildi)'),
   ('002', 'Eksik UNIQUE/FK/CHECK kisitlari ve indeksler'),
-  ('003', 'Aliskanliklar kullaniciya ozel: Ad/StatTuru/Puan KullaniciAliskanliklari tablosunda');
+  ('003', 'Aliskanliklar kullaniciya ozel: Ad/StatTuru/Puan KullaniciAliskanliklari tablosunda'),
+  ('005', 'Gorev kurallari: aktif ad benzersizligi, arsiv zamani, tamamlama verisi, meydan okuma turu');
