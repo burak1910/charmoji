@@ -257,7 +257,7 @@ süresince tutuluyor. `mysqldump --no-data --routines --triggers` ile karşıla�
 001→002→003 uygulanmış veritabanı ile `schema.sql` birebir aynıdır.
 
 **StatTuru: ENUM değil, CHECK + `utf8mb4_0900_bin`.** Geçerli değerler kodda yazıldığı gibi:
-`Zeka`, `Guc`, `Sosyallik`, `Disiplin`, `Yaraticilik` (`view/userpage.php:53`).
+`Zeka`, `Guc`, `Sosyallik`, `Disiplin`, `Yaraticilik` (`view/ortak/cekirdek.php:22` `YETENEKLER`, `view/gorevler.php:24` doğrulaması).
 * `utf8mb4_unicode_ci` harf ve aksan duyarsız ve PAD SPACE'tir: `'güç'`, `'GUC'`, `'Guc '`
   normal karşılaştırmada `'Guc'`a eşittir. Kod ise birebir karşılaştırma yapıyor.
   `utf8mb4_0900_bin` ikili ve NO PAD'dir; bu yazımların hepsini reddeder. (`utf8mb4_bin`
@@ -274,8 +274,8 @@ değer, tetikleyici `KullaniciAliskanliklari`'na yazarken reddedilir.
 
 | Tablo | UNIQUE | FK (ON DELETE) | Neden |
 |---|---|---|---|
-| KullaniciStatlari | (KullaniciID, StatTuru) | Kullanicilar (CASCADE) | `userpage.php` INSERT IGNORE |
-| KullaniciAliskanliklari | (KullaniciID, AliskanlikID), 003: (KullaniciID, Ad) | Kullanicilar (CASCADE), Aliskanliklar (RESTRICT) | `userpage.php:78` INSERT IGNORE |
+| KullaniciStatlari | (KullaniciID, StatTuru) | Kullanicilar (CASCADE) | `view/ortak/cekirdek.php:234` INSERT IGNORE |
+| KullaniciAliskanliklari | (KullaniciID, AliskanlikID), 003: (KullaniciID, Ad) | Kullanicilar (CASCADE), Aliskanliklar (RESTRICT) | `view/gorevler.php:43` INSERT IGNORE |
 | TakipKayitlari | (KullaniciAliskanlikID, Tarih) | KullaniciAliskanliklari (CASCADE) | INSERT IGNORE; aynı gün çift puan. CASCADE çünkü alışkanlık doğrudan silinir |
 | KullaniciEnvanteri | (KullaniciID, EsyaID) | Kullanicilar (CASCADE), MarketEsyalari (RESTRICT) | Satın alma yarışı |
 | KullaniciGunlukGorevleri | (KullaniciID, Tarih, GorevTanimID) | Kullanicilar (CASCADE), GorevTanimlari (RESTRICT) | Sayfa iki kez açılırsa görevler çiftlenir, ödül iki kez alınır |
@@ -290,14 +290,15 @@ sütunlarda UNIQUE olmayan bir indeks varsa onu UNIQUE ile değiştirir.
 003 uygulandıktan sonra kod, alışkanlığın adını/stat türünü/puanını
 `KullaniciAliskanliklari`'ndan okumalı ve yazmalı. Tetikleyici sayesinde eski kod çalışmaya
 devam eder, ama kullanıcıya özellik ancak bu değişikliklerle devreye girer ve 004 ancak
-bunlardan sonra uygulanabilir. Satır numaraları `main` (f46c536) dalına göredir.
+bunlardan sonra uygulanabilir. `view/userpage.php` artık yalnızca Karargah'a yönlendirir; kod `view/karargah.php`, `view/gorevler.php`, `view/ortak/cekirdek.php` ve `view/ajax_islem.php` dosyalarına taşındı. Satır numaraları `claude/amazing-wright-ht2d7d` dalının bu commit'teki durumuna göredir.
 
 | Dosya:satır | Bugün | Olması gereken |
 |---|---|---|
-| `view/userpage.php:75-77` | `SELECT AliskanlikID FROM Aliskanliklar WHERE Ad = ?`, yoksa `INSERT INTO Aliskanliklar (Ad, StatTuru, Puan)` | Kaldırılmalı; ortak tabloya artık yazılmaz. |
-| `view/userpage.php:78` | `$conn->query("INSERT IGNORE INTO KullaniciAliskanliklari (KullaniciID, AliskanlikID, BaslangicTarihi) VALUES ($kullaniciID, $aliskanlikID, CURDATE())")` | Hazır ifade: `INSERT IGNORE INTO KullaniciAliskanliklari (KullaniciID, Ad, StatTuru, Puan, BaslangicTarihi) VALUES (?, ?, ?, ?, CURDATE())`. Aynı kullanıcıda aynı ad varsa UQ_KA_Kullanici_Ad yüzünden eklenmez (`affected_rows = 0` → kullanıcıya mesaj). |
-| `view/userpage.php:83` | `SELECT KA.KullaniciAliskanlikID, A.Ad, A.StatTuru, A.Puan, ... FROM KullaniciAliskanliklari KA JOIN Aliskanliklar A ON KA.AliskanlikID = A.AliskanlikID ...` | `SELECT KA.KullaniciAliskanlikID, KA.Ad, KA.StatTuru, KA.Puan, KA.Seri, (...) AS BugunYapildi FROM KullaniciAliskanliklari KA WHERE KA.KullaniciID = ? AND KA.AktifMi = 1` (JOIN yok) |
-| `view/ajax_islem.php:240-243` | `SELECT KA.Seri, KA.SonIslemTarihi, A.Puan, A.StatTuru FROM KullaniciAliskanliklari KA JOIN Aliskanliklar A ON KA.AliskanlikID = A.AliskanlikID WHERE ...` | `SELECT KA.Seri, KA.SonIslemTarihi, KA.Puan, KA.StatTuru FROM KullaniciAliskanliklari KA WHERE KA.KullaniciAliskanlikID = ? AND KA.KullaniciID = ?` |
+| `view/gorevler.php:35-41` (görev ekleme) | `SELECT AliskanlikID FROM Aliskanliklar WHERE Ad = ?`, yoksa `INSERT INTO Aliskanliklar (Ad, StatTuru, Puan)` | Kaldırılmalı; ortak tabloya artık yazılmaz. |
+| `view/gorevler.php:43-44` | `INSERT IGNORE INTO KullaniciAliskanliklari (KullaniciID, AliskanlikID, BaslangicTarihi) VALUES (?, ?, CURDATE())` (hazır ifade, `AliskanlikID` ile) | `INSERT IGNORE INTO KullaniciAliskanliklari (KullaniciID, Ad, StatTuru, Puan, BaslangicTarihi) VALUES (?, ?, ?, ?, CURDATE())`. Aynı kullanıcıda aynı ad varsa UQ_KA_Kullanici_Ad yüzünden eklenmez (`affected_rows = 0` → kullanıcıya mesaj). |
+| `view/ortak/cekirdek.php:306-312` (`aktif_gorevler()`) | `SELECT KA.KullaniciAliskanlikID, A.Ad, A.StatTuru, A.Puan, ... FROM KullaniciAliskanliklari KA JOIN Aliskanliklar A ON KA.AliskanlikID = A.AliskanlikID ...` | `SELECT KA.KullaniciAliskanlikID, KA.Ad, KA.StatTuru, KA.Puan, KA.Seri, (...) AS BugunYapildi FROM KullaniciAliskanliklari KA WHERE KA.KullaniciID = ? AND KA.AktifMi = 1` (JOIN yok) |
+| `view/ajax_islem.php:280-283` | `SELECT KA.Seri, KA.SonIslemTarihi, A.Puan, A.StatTuru FROM KullaniciAliskanliklari KA JOIN Aliskanliklar A ON KA.AliskanlikID = A.AliskanlikID WHERE ...` | `SELECT KA.Seri, KA.SonIslemTarihi, KA.Puan, KA.StatTuru FROM KullaniciAliskanliklari KA WHERE KA.KullaniciAliskanlikID = ? AND KA.KullaniciID = ?` |
+| `view/karakter.php:22-24` | `SELECT A.StatTuru, COUNT(*) ... FROM KullaniciAliskanliklari KA JOIN Aliskanliklar A ON KA.AliskanlikID = A.AliskanlikID ... GROUP BY A.StatTuru` (yetenek başına görev sayısı) | `SELECT KA.StatTuru, COUNT(*) ... FROM KullaniciAliskanliklari KA WHERE KA.KullaniciID = ? AND KA.AktifMi = 1 GROUP BY KA.StatTuru` (JOIN yok) |
 
 Başka hiçbir PHP dosyası `Aliskanliklar` tablosuna veya `AliskanlikID` sütununa başvurmuyor
 (`grep -rnwE "Aliskanliklar|AliskanlikID" service view config` yalnızca yukarıdaki satırları bulur).
@@ -309,11 +310,13 @@ düz `INSERT`'leri hataya düşürür; veri bozulmaz ama kullanıcı hata göreb
 
 | Dosya:satır | Sorun | Öneri |
 |---|---|---|
-| `view/userpage.php:35` | Günlük görevler düz `INSERT` ile ekleniyor; iki eşzamanlı sayfa açılışında ikincisi UQ_KGG hatasıyla yakalanmamış istisna verir | `INSERT IGNORE` |
-| `view/ajax_islem.php:150` | Eşzamanlı aynı eşya alımında UQ_Env hatası `catch` ile yakalanır ama kullanıcı genel "sunucu hatası" mesajı görür | 1062 hatasını "Zaten sahipsin." olarak çevir |
-| `view/ajax_islem.php:133-149` | Bakiye okunup PHP'de hesaplanıp yazılıyor (`SET Bakiye = ?`): eşzamanlı iki farklı alımda biri kaybolur (lost update) | `SELECT ... FOR UPDATE` ya da `UPDATE Kullanicilar SET Bakiye = Bakiye - ? WHERE KullaniciID = ? AND Bakiye >= ?` + `affected_rows` kontrolü |
-| `view/ajax_islem.php:172-182` | Ödül önce okunup sonra veriliyor; eşzamanlı iki istekte ödül iki kez alınabilir | Önce `UPDATE KullaniciGunlukGorevleri SET OdulAlindiMi = 1 WHERE KullaniciGorevID = ? AND KullaniciID = ? AND TamamlandiMi = 1 AND OdulAlindiMi = 0`, `affected_rows = 1` ise bakiyeyi artır |
-| `service/FriendManager.php:44,98,113` | Topluluk/istek/arkadaş sorguları `AvatarVerisi` seçmiyor; `view/userpage.php:273,286,298` bu alanı bekliyor (hep varsayılan avatar çizilir) | Sorgulara `k.AvatarVerisi` / `K.AvatarVerisi` ekle |
+| `view/ajax_islem.php:184-189` (satın alma `INSERT` + `catch`) | Eşzamanlı aynı eşya alımında UQ_Env hatası `catch` ile yakalanır ama kullanıcı genel "sunucu hatası" mesajı görür | 1062 hatasını "Zaten sahipsin." olarak çevir |
+| `view/ajax_islem.php:158-183` (satın alma) | Bakiye okunup PHP'de hesaplanıp yazılıyor (`SET Bakiye = ?`): eşzamanlı iki farklı alımda biri kaybolur (lost update) | `SELECT ... FOR UPDATE` ya da `UPDATE Kullanicilar SET Bakiye = Bakiye - ? WHERE KullaniciID = ? AND Bakiye >= ?` + `affected_rows` kontrolü |
+| `view/ajax_islem.php:205-222` (ödül alma) | Ödül önce okunup sonra veriliyor; eşzamanlı iki istekte ödül iki kez alınabilir | Önce `UPDATE KullaniciGunlukGorevleri SET OdulAlindiMi = 1 WHERE KullaniciGorevID = ? AND KullaniciID = ? AND TamamlandiMi = 1 AND OdulAlindiMi = 0`, `affected_rows = 1` ise bakiyeyi artır |
+
+Giderilenler (artık geçerli değil): günlük görevlerin düz `INSERT` ile eklenmesi
+(`view/ortak/cekirdek.php:221` `INSERT IGNORE` kullanıyor) ve `service/FriendManager.php`
+sorgularında `AvatarVerisi` eksikliği (topluluk/istek/arkadaş sorguları artık seçiyor).
 
 ## Varsayımlar, sınırlar ve ortam notları
 
