@@ -8,17 +8,17 @@ GA=$(yeni_kavanoz g_a); GB=$(yeni_kavanoz g_b)
 kayit_ol "$GA" "sqli_a" "sqli_a@test.local" "Sifre123!"
 kayit_ol "$GB" "sqli_b" "sqli_b@test.local" "Sifre123!"
 GA_ID=$(kullanici_id sqli_a@test.local); GB_ID=$(kullanici_id sqli_b@test.local)
-GA_J=$(sayfa_jetonu "$GA"); GB_J=$(sayfa_jetonu "$GB")   # userpage ziyareti stat satırlarını oluşturur
+GA_J=$(sayfa_jetonu "$GA"); GB_J=$(sayfa_jetonu "$GB")   # ana sayfa ziyareti stat satırlarını oluşturur
 KOTU_STAT="x' OR '1'='1"
 
 # 1. Girişte reddedilir
-istek "$GA" "${BASE}view/userpage.php" -d "add_habit_btn=1" -d "habit_name=sqli_aliskanlik" \
+istek "$GA" "${BASE}${GOREV_YOLU}" -d "add_habit_btn=1" -d "habit_name=sqli_aliskanlik" \
     --data-urlencode "habit_stat=$KOTU_STAT" -d "csrf_token=$GA_J"
 KAYITLI=$(sql "SELECT COUNT(*) FROM Aliskanliklar WHERE StatTuru = 'x'' OR ''1''=''1'")
 kanit "habit_stat='$KOTU_STAT' gönderildi: HTTP $HTTP_KOD, veritabanında bu StatTuru ile kayıt: $KAYITLI"
 dogrula "habit_stat='$KOTU_STAT' girişte reddedildi (kaydedilmedi)" esit "$KAYITLI" "0"
 
-istek "$GA" "${BASE}view/userpage.php" -d "add_habit_btn=1" -d "habit_name=gecerli_aliskanlik" \
+istek "$GA" "${BASE}${GOREV_YOLU}" -d "add_habit_btn=1" -d "habit_name=gecerli_aliskanlik" \
     -d "habit_stat=Disiplin" -d "csrf_token=$GA_J"
 dogrula "geçerli habit_stat (Disiplin) kabul edildi" esit "$(sql "SELECT StatTuru FROM Aliskanliklar WHERE Ad='gecerli_aliskanlik'")" "Disiplin"
 
@@ -64,6 +64,12 @@ B_KUSANDI=$(sql "SELECT KusandiMi FROM KullaniciEnvanteri WHERE KullaniciID=$GB_
 dogrula "kötü EsyaTuru ile kuşanma B'nin kuşandığı eşyayı çıkarmadı" esit "$B_KUSANDI" "1"
 dogrula "A kötü türdeki kendi eşyasını yine de kuşanabildi" esit "$(sql "SELECT KusandiMi FROM KullaniciEnvanteri WHERE KullaniciID=$GA_ID AND EsyaID=$KOTU_ESYA")" "1"
 
-# 4. Kötü StatTuru listede kaçışlanıyor (userpage.php)
-istek "$GA" "${BASE}view/userpage.php"
-dogrula "userpage.php: StatTuru HTML'e kaçışlanarak basılıyor" icerir "$HTTP_GOVDE" "x&#039; OR &#039;1&#039;=&#039;1"
+# 4. Kötü StatTuru görev listesinde kaçışlanıyor
+istek "$GA" "${BASE}${GOREV_YOLU}"
+dogrula "$GOREV_YOLU: StatTuru HTML'e kaçışlanarak basılıyor" icerir "$HTTP_GOVDE" "x&#039; OR &#039;1&#039;=&#039;1"
+dogrula "$GOREV_YOLU: StatTuru ham (kaçışsız) basılmıyor" icermez "$HTTP_GOVDE" "x' OR '1'='1"
+if [[ "$MOD" == "yeni" ]]; then
+    istek "$GA" "${BASE}${ANA_YOLU}"
+    dogrula "$ANA_YOLU (sıradaki görevler): StatTuru kaçışlanarak basılıyor" \
+        bash -c '[[ "$0" == *"x&#039; OR &#039;1&#039;=&#039;1"* && "$0" != *"x'"'"' OR '"'"'1'"'"'='"'"'1"* ]]' "$HTTP_GOVDE"
+fi

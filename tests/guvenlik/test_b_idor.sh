@@ -90,3 +90,18 @@ if grep -q "function rejectRequest" "$UYGULAMA/service/FriendManager.php" 2>/dev
 else
     dogrula "FriendManager: rejectRequest/removeFriend sahiplik kontrollü ayrı metotlar mevcut" false
 fi
+
+# --- Dalga 2: Maceracı bul araması (view/lonca_ara.php): yalnızca kahraman adıyla, e-posta sızdırmaz
+if [[ "$MOD" == "yeni" ]]; then
+    istek "${KAV[A]}" "${BASE}view/lonca_ara.php?q=idor_"
+    kanit "A 'idor_' araması: $HTTP_GOVDE" | cut -c1-200
+    dogrula "arama: sonuç döner ve e-posta adresi içermez" \
+        bash -c '[[ "$0" == "200" && "$1" == *"\"success\":true"* && "$1" == *"idor_B"* && "$1" != *"@test.local"* && "$1" != *"Eposta"* ]]' "$HTTP_KOD" "$HTTP_GOVDE"
+    dogrula "arama: oyuncunun kendisi sonuçlarda yok" icermez "$HTTP_GOVDE" '"ad":"idor_A"'
+    istek "${KAV[A]}" "${BASE}view/lonca_ara.php?q=idor_b%40test.local"
+    dogrula "arama: e-posta ile kişi bulunamıyor (yalnızca kahraman adı)" icermez "$HTTP_GOVDE" "idor_B"
+    istek "${KAV[A]}" "${BASE}view/lonca_ara.php?q=%25%25"
+    dogrula "arama: LIKE joker karakteri (%) herkesi listelemiyor" icermez "$HTTP_GOVDE" "idor_B"
+    istek "$(yeni_kavanoz b_arama_oturumsuz)" "${BASE}view/lonca_ara.php?q=idor_"
+    dogrula "arama: oturumsuz istek 401, sonuç yok" bash -c '[[ "$0" == "401" && "$1" != *"idor_"* ]]' "$HTTP_KOD" "$HTTP_GOVDE"
+fi

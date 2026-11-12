@@ -97,12 +97,17 @@ if [[ "$MOD" == "eski" ]]; then
     bash "$TEST_DIZINI/eski_kodu_hazirla.sh" "$ESKI_REF" "$UYGULAMA" || exit 2
     LOGIN_YOLU="service/login.php"
     REGISTER_YOLU="service/register.php"
+    ANA_YOLU="view/userpage.php"      # giriş sonrası açılan sayfa
+    GOREV_YOLU="view/userpage.php"    # görev ekleme formu + görev ve meydan okuma listesi
 else
     UYGULAMA="$KOK"
     LOGIN_YOLU="view/login.php"
     REGISTER_YOLU="view/register.php"
+    # Dalga 2: tek sayfalık userpage.php beş sekmeye bölündü (eski adres Karargah'a yönlenir).
+    ANA_YOLU="view/karargah.php"
+    GOREV_YOLU="view/gorevler.php"
 fi
-export UYGULAMA LOGIN_YOLU REGISTER_YOLU
+export UYGULAMA LOGIN_YOLU REGISTER_YOLU ANA_YOLU GOREV_YOLU
 
 echo "Mod: $MOD   Uygulama: $UYGULAMA   Veritabanı: $TEST_DB"
 [[ "$MOD" == "eski" ]] && echo "Eski kod: $ESKI_REF (yalnızca DB adı ve FriendManager dosya adı uyarlandı)"

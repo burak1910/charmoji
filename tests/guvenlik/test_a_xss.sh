@@ -51,12 +51,21 @@ UPDATE Kullanicilar SET AvatarVerisi = JSON_OBJECT(
 SQL
 kanit "elle yazılan: $(avatar_verisi)"
 
-istek "$A_KAV" "${BASE}view/userpage.php"
+istek "$A_KAV" "${BASE}${ANA_YOLU}"
 UP="$HTTP_GOVDE"
-dogrula "userpage.php: kötü değer HTML'e script olarak basılmadı" icermez "$UP" "<script>window.__xss"
-dogrula "userpage.php: kötü değer attribute kaçışı yapamadı (onload yok)" icermez "$UP" 'onload="window.__xss'
-dogrula "userpage.php: geçersiz ten rengi varsayılana (#F3D2C1) düştü" icerir "$UP" 'id="Skin" fill="#F3D2C1"'
-dogrula "userpage.php: geçerli saç rengi (#ABCDEF) korunuyor" icerir "$UP" 'id="Hair" fill="#ABCDEF"'
+dogrula "$ANA_YOLU: kötü değer HTML'e script olarak basılmadı" icermez "$UP" "<script>window.__xss"
+dogrula "$ANA_YOLU: kötü değer attribute kaçışı yapamadı (onload yok)" icermez "$UP" 'onload="window.__xss'
+dogrula "$ANA_YOLU: geçersiz ten rengi varsayılana (#F3D2C1) düştü" icerir "$UP" 'id="Skin" fill="#F3D2C1"'
+dogrula "$ANA_YOLU: geçerli saç rengi (#ABCDEF) korunuyor" icerir "$UP" 'id="Hair" fill="#ABCDEF"'
+
+# Dalga 2: karakter çizen diğer sekmeler (Karakter, Lonca satırları) de aynı veriyi çizer.
+if [[ "$MOD" == "yeni" ]]; then
+    for A_SAYFA in view/karakter.php view/lonca.php; do
+        istek "$A_KAV" "${BASE}${A_SAYFA}"
+        dogrula "$A_SAYFA: kötü değer script/attribute olarak basılmadı" \
+            bash -c '[[ "$0" == "200" && "$1" != *"<script>window.__xss"* && "$1" != *"onload=\"window.__xss"* ]]' "$HTTP_KOD" "$HTTP_GOVDE"
+    done
+fi
 
 istek "$A_KAV" "${BASE}view/avatar.php"
 AV="$HTTP_GOVDE"
@@ -73,7 +82,7 @@ dogrula "renderAvatar: kötü \$size parametresi kaçış yapamadı" icermez "$S
 if [[ "$PLAYWRIGHT" == "1" ]] && command -v node >/dev/null; then
     PW=$(node "$TEST_DIZINI/xss_tarayici.js" "$BASE" "$LOGIN_YOLU" "xss_a@test.local" "Sifre123!" 2>&1)
     kanit "playwright: $PW"
-    dogrula "tarayıcıda userpage.php ve avatar.php açılırken enjekte script çalışmadı (window.__xss tanımsız)" \
+    dogrula "tarayıcıda oturum açık sayfalar açılırken enjekte script çalışmadı (window.__xss tanımsız)" \
         icerir "$PW" '"tetiklenen":[]'
 else
     atla "Playwright testi (PLAYWRIGHT=0 ya da node yok)"

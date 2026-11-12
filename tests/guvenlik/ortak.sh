@@ -9,6 +9,8 @@
 #   BASE_ALT      : uygulamanın /charmoji/ alt dizininden servis edildiği adres
 #   LOGIN_YOLU    : giriş sayfası (yeni: view/login.php, eski: service/login.php)
 #   REGISTER_YOLU : kayıt sayfası (yeni: view/register.php, eski: service/register.php)
+#   ANA_YOLU      : giriş sonrası açılan sayfa (yeni: view/karargah.php, eski: view/userpage.php)
+#   GOREV_YOLU    : görev ekleme formu ve görev/meydan okuma listesi (yeni: view/gorevler.php, eski: view/userpage.php)
 #   GECICI        : bu çalıştırmaya ait geçici dizin
 #   TEST_DB, TEST_DB_USER, TEST_DB_PASSWORD, TEST_DB_HOST
 
@@ -123,9 +125,9 @@ giris_yap() {
         --data-urlencode "csrf_token=$jeton"
 }
 
-# sayfa_jetonu KAVANOZ [BASE] -> giriş yapılmış kullanıcının userpage jetonu
+# sayfa_jetonu KAVANOZ [BASE] -> giriş yapılmış kullanıcının ana sayfadaki jetonu
 sayfa_jetonu() {
-    jeton_cek "$1" "${2:-$BASE}view/userpage.php"
+    jeton_cek "$1" "${2:-$BASE}${ANA_YOLU}"
 }
 
 # ajax KAVANOZ JETON [curl argümanları...]  (jeton X-CSRF-Token başlığında)
@@ -134,8 +136,8 @@ ajax() {
     istek "$kavanoz" "${BASE}view/ajax_islem.php" -H "X-CSRF-Token: $jeton" "$@"
 }
 
-# oturum_acik_mi KAVANOZ [BASE] -> userpage.php 200 ve login'e yönlenmiyorsa 0
+# oturum_acik_mi KAVANOZ [BASE] -> ana sayfa 200 ve login'e yönlenmiyorsa 0
 oturum_acik_mi() {
-    istek "$1" "${2:-$BASE}view/userpage.php" -L
-    [[ "$HTTP_KOD" == "200" && "$HTTP_SON_URL" == *"view/userpage.php" ]]
+    istek "$1" "${2:-$BASE}${ANA_YOLU}" -L
+    [[ "$HTTP_KOD" == "200" && "$HTTP_SON_URL" == *"$ANA_YOLU" ]]
 }

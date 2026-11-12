@@ -84,9 +84,9 @@ uc_dene "friend_action (red)" "SELECT COUNT(*) FROM Arkadasliklar WHERE Arkadasl
 f_sil()     { form_post "$1" "${BASE}service/friend_action.php" -d "remove_friend_id=$GELEN"; }
 uc_dene "friend_action (arkadaş sil)" "SELECT COUNT(*) FROM Arkadasliklar WHERE ArkadaslikID=$GELEN" f_sil
 
-# --- userpage.php (alışkanlık ekleme formu)
-h_ekle()    { form_post "$1" "${BASE}view/userpage.php" -d "add_habit_btn=1" -d "habit_name=csrf_aliskanlik" -d "habit_stat=Zeka"; }
-uc_dene "userpage.php (alışkanlık ekle)" "SELECT COUNT(*) FROM KullaniciAliskanliklari WHERE KullaniciID=$U_ID" h_ekle
+# --- görev (alışkanlık) ekleme formu
+h_ekle()    { form_post "$1" "${BASE}${GOREV_YOLU}" -d "add_habit_btn=1" -d "habit_name=csrf_aliskanlik" -d "habit_stat=Zeka"; }
+uc_dene "$GOREV_YOLU (görev ekle)" "SELECT COUNT(*) FROM KullaniciAliskanliklari WHERE KullaniciID=$U_ID" h_ekle
 KA_ID=$(sql "SELECT KullaniciAliskanlikID FROM KullaniciAliskanliklari WHERE KullaniciID=$U_ID LIMIT 1")
 
 # --- ajax_islem.php uçları
@@ -118,3 +118,31 @@ J=$(sayfa_jetonu "$G")
 istek "$G" "${BASE}service/logout.php" -d "csrf_token=$J"
 oturum_acik_mi "$G"; ACIK=$?
 dogrula "logout: doğru jetonlu POST ile çıkış yapıldı" esit "$ACIK" "1"
+
+# --- Dalga 2: friend_action.php JSON kipi (Lonca sekmesi AJAX ile çağırır) aynı CSRF denetiminden geçer
+if [[ "$MOD" == "yeni" ]]; then
+    G2=$(yeni_kavanoz c_json); kayit_ol "$G2" "csrf_json" "csrf_json@test.local" "Sifre123!"
+    G2_ID=$(kullanici_id csrf_json@test.local); J2=$(sayfa_jetonu "$G2")
+    H4=$(yeni_kavanoz c_hedef4); kayit_ol "$H4" "csrf_hedef4" "csrf_hedef4@test.local" "Sifre123!"
+    H4_ID=$(kullanici_id csrf_hedef4@test.local)
+    json_istek() { # jeton
+        istek "$G2" "${BASE}service/friend_action.php" -H "Accept: application/json" ${1:+-H "X-CSRF-Token: $1"} \
+            -d "action=send_request" -d "target_id=$H4_ID"
+    }
+    SAY="SELECT COUNT(*) FROM Arkadasliklar WHERE IstekGonderenID=$G2_ID"
+    json_istek ""
+    dogrula "friend_action JSON kipi: jetonsuz istek 403 + JSON ile reddedildi, kayıt yok" \
+        bash -c '[[ "$0" == "403" && "$1" == *"\"success\":false"* && "$2" == "0" ]]' "$HTTP_KOD" "$HTTP_GOVDE" "$(sql "$SAY")"
+    json_istek "$YANLIS_JETON"
+    dogrula "friend_action JSON kipi: yanlış jetonla reddedildi (HTTP $HTTP_KOD)" esit "$(sql "$SAY")" "0"
+    json_istek "$J2"
+    dogrula "friend_action JSON kipi: doğru jetonla çalışıyor ({success:true})" \
+        bash -c '[[ "$0" == *"\"success\":true"* && "$1" == "1" ]]' "$HTTP_GOVDE" "$(sql "$SAY")"
+    # Oturumsuz JSON isteği: 401 + oturum_kapali (arayüz "Oturumun sona erdi" gösterir)
+    istek "$(yeni_kavanoz c_json_oturumsuz)" "${BASE}service/friend_action.php" -H "Accept: application/json" -d "action=send_request" -d "target_id=$H4_ID"
+    dogrula "friend_action JSON kipi: oturumsuz istek 401 + oturum_kapali" \
+        bash -c '[[ "$0" == "401" && "$1" == *"oturum_kapali"* ]]' "$HTTP_KOD" "$HTTP_GOVDE"
+    istek "$(yeni_kavanoz c_ajax_oturumsuz)" "${BASE}view/ajax_islem.php" -d "buy_item_id=1"
+    dogrula "ajax_islem.php: oturumsuz istek 401 + oturum_kapali" \
+        bash -c '[[ "$0" == "401" && "$1" == *"oturum_kapali"* ]]' "$HTTP_KOD" "$HTTP_GOVDE"
+fi
