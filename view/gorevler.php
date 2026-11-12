@@ -75,10 +75,8 @@ $sayfaMetinleri = array_merge(GOREV_KARTI_METINLERI, [
 $sayfaVerisi = [
     'sayfa' => 'gorevler',
     'gunSonuSn' => $gunSonu,
-    'seviye' => $ortak['seviye'],
     'sinir' => GOREV_SINIRI,
     'adEnUzun' => GOREV_AD_EN_UZUN,
-    'geriGetirmeSn' => 5,
 ];
 
 require __DIR__ . '/ortak/ust.php';

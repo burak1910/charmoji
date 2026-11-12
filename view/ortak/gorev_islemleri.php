@@ -176,7 +176,8 @@ function gorev_duzenle(mysqli $conn, int $kullaniciID, int $kaID, $hamAd, $hamYe
 
 /**
  * Görevi siler = arşivler (S18): AktifMi = 0, ArsivZamani = şimdi. XP, altın, seviye,
- * seri ve takip kayıtları değişmez; görev listeden ve günlük ilerlemeden çıkar.
+ * seri ve takip kayıtları değişmez; görev listeden çıkar. Günlük meydan okuma ilerlemesi
+ * yeniden hesaplanmaz: bugün tamamlanıp silinen görev "Görev Tamamla" sayımında kalır.
  */
 function gorev_arsivle(mysqli $conn, int $kullaniciID, int $kaID): void
 {
