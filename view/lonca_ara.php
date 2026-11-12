@@ -33,7 +33,7 @@ foreach ($sonuclar as $s) {
         'id' => $id,
         'ad' => (string) $s['Ad'],
         'seviye' => $seviyeler[$id] ?? 1,
-        // renderAvatar yalnızca doğrulanmış renklerle ve sabit eşya çizimleriyle SVG üretir.
+        // renderAvatar yalnızca doğrulanmış seçenek numaralarıyla ve sabit görsel yollarıyla HTML üretir.
         'avatar' => renderAvatar($s['AvatarVerisi'] ?? null, '48px'),
     ];
 }

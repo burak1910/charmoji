@@ -97,7 +97,7 @@ require __DIR__ . '/ortak/ust.php';
                     data-seviye="<?= (int) $u['GerekenSeviye'] ?>" data-sahip="<?= $sahip ? '1' : '0' ?>"
                     aria-label="<?= e($kartEtiketi) ?>">
                 <span class="esya-ikon-kutu" aria-hidden="true">
-                    <i class="fa-solid <?= e($u['GorselURL']) ?>"></i>
+                    <?= esya_ikon_html($u, 88) ?>
                     <?php if ($kilitli): ?><span class="esya-kilit"><i class="fa-solid fa-lock" style="font-size:24px;color:var(--metin)"></i></span><?php endif; ?>
                 </span>
                 <span class="esya-ad" aria-hidden="true"><?= e($u['Ad']) ?></span>

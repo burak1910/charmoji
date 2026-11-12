@@ -7,7 +7,7 @@ define('CHARMOJI_JSON_YANIT', true);
 
 // Oturum ve hata ayarları (display_errors kapalı) auth.php içinde yapılır.
 require_once __DIR__ . '/../service/auth.php';
-require_once __DIR__ . '/avatar_renderer.php'; // Renk doğrulama fonksiyonları
+require_once __DIR__ . '/avatar_renderer.php'; // Görünüm seçeneği doğrulama
 // Ortak çekirdek: metin(), hesaplaLevelVerileri(). Include anında çıktı, yönlendirme
 // ya da veritabanı işlemi yapmaz (oturum denetimi yalnızca sayfa_baslat() içindedir).
 require_once __DIR__ . '/ortak/cekirdek.php';
@@ -75,34 +75,28 @@ function sorgu(mysqli $conn, string $sql, string $tipler = '', array $degerler =
 // A. AVATAR İŞLEMLERİ (BU KISIM EKSİKTİ)
 // ---------------------------------------------------------
 
-// A1. Avatar Renklerini Kaydetme
-if (isset($_POST['save_avatar_colors'])) {
-    // JSON metni olarak gelir; yalnızca izinli anahtarlar ve #RRGGBB değerler kabul edilir.
-    $ham = $_POST['colors'] ?? '';
-    $gelen = (is_string($ham) && strlen($ham) <= 1000) ? json_decode($ham, true) : null;
-
-    $temiz = [];
-    $gecerli = is_array($gelen) && $gelen !== [];
-    if ($gecerli) {
-        foreach ($gelen as $anahtar => $renk) {
-            if (!array_key_exists($anahtar, AVATAR_VARSAYILAN_RENKLER) || !avatar_renk_gecerli_mi($renk)) {
-                $gecerli = false;
-                break;
-            }
-            $temiz[$anahtar] = $renk;
-        }
-    }
-    if (!$gecerli) {
+// A1. Görünüm seçeneklerini kaydetme (06 §5): {"ten":1..4,"sac":1..6,"ust":1..4}
+// JSON metni olarak gelir; yalnızca izinli bölgeler ve tanımlı seçenek numaraları kabul
+// edilir (eski serbest renk anahtarları da dahil, başka her şey reddedilir).
+if (isset($_POST['save_avatar_options'])) {
+    $ham = $_POST['secenekler'] ?? '';
+    $gelen = (is_string($ham) && strlen($ham) <= 200) ? json_decode($ham, true) : null;
+    $sonuc = avatar_secenekleri_dogrula($gelen);
+    if ($sonuc['secenekler'] === null) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => metin('gorunum.hata_gecersiz_secenek')]);
+        $yanit = ['success' => false, 'kod' => 'gecersiz_secenek', 'message' => metin('gorunum.hata_gecersiz_secenek')];
+        if ($sonuc['hatali'] !== '') {
+            $yanit['bolge'] = $sonuc['hatali'];
+        }
+        echo json_encode($yanit);
         exit();
     }
 
-    // Eksik anahtarlar varsayılanla tamamlanır; veritabanına yalnızca doğrulanmış veri yazılır.
-    $colors = json_encode(array_merge(AVATAR_VARSAYILAN_RENKLER, $temiz));
+    // Veritabanına yalnızca doğrulanmış tam sayılardan kurulan JSON yazılır; eksik bölge 1.
+    $kayit = json_encode($sonuc['secenekler']);
     try {
-        sorgu($conn, "UPDATE Kullanicilar SET AvatarVerisi = ? WHERE KullaniciID = ?", "si", [$colors, $kullaniciID]);
-        echo json_encode(['success' => true, 'message' => metin('gorunum.kaydedildi_bildirim')]);
+        sorgu($conn, "UPDATE Kullanicilar SET AvatarVerisi = ? WHERE KullaniciID = ?", "si", [$kayit, $kullaniciID]);
+        echo json_encode(['success' => true, 'secenekler' => $sonuc['secenekler'], 'message' => metin('gorunum.kaydedildi_bildirim')]);
     } catch (Throwable $e) {
         echo json_encode(ajax_hata_yaniti($e));
     }
