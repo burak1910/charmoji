@@ -51,7 +51,7 @@ require __DIR__ . '/ortak/ust.php';
         <li>
             <a class="yuva<?= $esya ? ' dolu' : '' ?>" href="avatar.php?tur=<?= e(rawurlencode($tur)) ?>#canta"
                aria-label="<?= $esya ? t('karakter.yuva_etiketi', ['tur' => $turAdi, 'esya' => $esya['Ad']]) : t('karakter.yuva_bos_etiketi', ['tur' => $turAdi]) ?>">
-                <i class="fa-solid <?= e($esya ? $esya['GorselURL'] : ESYA_TUR_IKONLARI[$tur]) ?>" aria-hidden="true"></i>
+                <?= $esya ? esya_ikon_html($esya, 40) : '<i class="fa-solid ' . e(ESYA_TUR_IKONLARI[$tur]) . '" aria-hidden="true"></i>' ?>
                 <span class="yuva-tur" aria-hidden="true"><?= e($turAdi) ?></span>
                 <span class="yuva-ad" aria-hidden="true"><?= $esya ? e($esya['Ad']) : t('karakter.yuva_bos') ?></span>
             </a>

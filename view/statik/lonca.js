@@ -224,7 +224,7 @@
         li.dataset.seviye = k.seviye;
         const av = el('span', 'kisi-avatar');
         av.setAttribute('aria-hidden', 'true');
-        av.innerHTML = k.avatar; // sunucuda doğrulanmış renklerle üretilmiş SVG (renderAvatar)
+        av.innerHTML = k.avatar; // sunucuda renderAvatar ile üretilmiş piksel büst (sabit görsel yolları)
         li.appendChild(av);
         const govde = el('div', 'kisi-govde');
         govde.appendChild(el('p', 'kisi-ad', k.ad));

@@ -115,9 +115,11 @@ h1, h2, h3 { margin: 0; font-weight: 700; }
 .ust-geri { justify-self: start; justify-content: center; color: var(--metin); }
 .ust-altin { justify-self: end; justify-content: flex-end; padding: 0 4px; font-weight: 700; color: var(--altin); }
 .altin-ikon {
+    /* Piksel altın para (assets/araclar/piksel-varlik-uret.py); her yoğunluğa kendi boyu. */
     display: inline-block; width: 16px; height: 16px; flex: none;
-    background: var(--altin); border: 2px solid #B8832B; border-radius: 50%;
-    box-shadow: inset -2px -2px 0 #B8832B, inset 2px 2px 0 #FFE08A;
+    background: url("gorsel/nesne/altin-16.png") center / 100% 100% no-repeat;
+    background-image: image-set(url("gorsel/nesne/altin-16.png") 1x, url("gorsel/nesne/altin-32.png") 2x, url("gorsel/nesne/altin-64.png") 3x);
+    image-rendering: pixelated;
 }
 .parlama { animation: parlama 600ms ease-out; }
 @keyframes parlama { 0% { transform: scale(1); } 40% { transform: scale(1.15); } 100% { transform: scale(1); } }
@@ -457,6 +459,48 @@ fieldset.alan { border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
 /* ------------------------------------------------------------ Karakter (avatar) */
 .karakter-kutu { display: flex; justify-content: center; }
 .karakter-kutu svg { display: block; }
+
+/* Piksel büst (view/avatar_renderer.php): aynı tuvaldeki katmanlar üst üste. */
+.pk { position: relative; display: block; flex: none; aspect-ratio: 1 / 1; max-width: 100%; }
+.pk-k {
+    position: absolute; inset: 0; width: 100%; height: 100%; max-width: none;
+    image-rendering: pixelated; pointer-events: none; user-select: none; -webkit-user-drag: none;
+}
+.pk-yuva { position: absolute; inset: 0; pointer-events: none; }
+.pk-svg { overflow: visible; }
+/* Şapka takılıyken siperin üstünde kalan saç gizlenir (yüzde: piksel-varlik-uret.py çıktısı). */
+.pk-sapkali .pk-sac { clip-path: inset(42.24% 0 0 0); }
+/* Şapka yoksa tuvalin üstündeki boşluk kırpılır: görünür bölge, tuvalin (kaynak pikseliyle)
+   y 352..1269 ve ortalanmış 917 px'lik karesidir (1269 / 917 = %138,4). */
+.pk-tam.pk-sapkasiz { overflow: hidden; }
+.pk-sapkasiz > .pk-k, .pk-sapkasiz > .pk-yuva { width: 138.4%; height: 138.4%; left: -19.2%; top: -38.4%; }
+/* Küçük kadrajda (liste satırı, seçenek kutusu) görsel küçültülür: yumuşak örnekleme daha okunaklı. */
+.pk-yakin .pk-k { image-rendering: auto; }
+/* Görünüm (E51) ve Çanta (E52) */
+.onizleme-alan {
+    position: sticky; top: var(--ust-bar); z-index: 5; background: var(--zemin);
+    padding: 8px 0; margin: -16px 0 0;
+}
+.gorunum-bolge { margin-bottom: 16px; }
+.gorunum-bolge-baslik { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.gorunum-bolge-baslik h2 { font-size: 16px; }
+.gorunum-secenekler { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 2px 6px; }
+.secenek-kutu {
+    position: relative; flex: none; width: 64px; height: 64px; padding: 2px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--panel); border: 2px solid var(--kenarlik); border-radius: var(--kose); cursor: pointer;
+}
+.secenek-kutu[aria-checked="true"] { border: 3px solid var(--altin); }
+.secenek-tik {
+    position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%;
+    display: none; align-items: center; justify-content: center;
+    background: var(--altin); color: var(--zemin); font-size: 12px; font-weight: 700;
+}
+.secenek-kutu[aria-checked="true"] .secenek-tik { display: flex; }
+.esya-ikon-kutu i.canta-ikon { font-size: 28px; }
+.esya-ikon-kutu .esya-piksel.canta-ikon { width: 56px; height: 56px; }
+/* Eşya ikonları (piksel görseli olanlar) */
+.esya-piksel { display: block; image-rendering: pixelated; max-width: 100%; height: auto; }
 .nefes { animation: nefes 2s ease-in-out infinite; }
 @keyframes nefes { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
 .sekme-hop { animation: sekme-hop 600ms ease-out; }
@@ -468,7 +512,7 @@ fieldset.alan { border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
     background: var(--panel); border-radius: var(--kose); padding: 8px 8px 8px 12px; position: relative;
 }
 .kisi-avatar { flex: none; width: 48px; height: 48px; }
-.kisi-avatar svg { width: 48px; height: 48px; }
+.kisi-avatar .pk { width: 48px; height: 48px; }
 .kisi-govde { flex: 1; min-width: 0; }
 .kisi-ad { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
 .kisi-alt { color: var(--metin-ikincil); font-size: 14px; margin: 0; }
@@ -490,6 +534,7 @@ fieldset.alan { border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
     background: var(--zemin); border-radius: 6px; margin-bottom: 4px;
 }
 .esya-ikon-kutu i { font-size: 44px; color: var(--metin-ikincil); }
+.esya-ikon-kutu .esya-piksel { width: 88px; height: 88px; }
 .esya-kilit {
     position: absolute; inset: 0; background: rgba(10, 8, 24, .6); border-radius: 6px;
     display: flex; align-items: center; justify-content: center; color: var(--metin);
@@ -511,6 +556,7 @@ fieldset.alan { border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
 .yuva.dolu { border-style: solid; border-color: var(--altin); }
 .yuva i { font-size: 24px; color: var(--metin-ikincil); height: 40px; display: flex; align-items: center; }
 .yuva:not(.dolu) i { opacity: .55; }
+.yuva .esya-piksel { width: 40px; height: 40px; }
 .yuva-tur { font-size: 13px; color: var(--metin-ikincil); }
 .yuva-ad { font-size: 13px; font-weight: 600; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .yetenek-karti { background: var(--panel); border-radius: var(--kose); }

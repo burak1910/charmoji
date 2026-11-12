@@ -90,8 +90,13 @@ uc_dene "$GOREV_YOLU (görev ekle)" "SELECT COUNT(*) FROM KullaniciAliskanliklar
 KA_ID=$(sql "SELECT KullaniciAliskanlikID FROM KullaniciAliskanliklari WHERE KullaniciID=$U_ID LIMIT 1")
 
 # --- ajax_islem.php uçları
-a_renk()    { ajax_post "$1" --data-urlencode "save_avatar_colors=1" --data-urlencode 'colors={"skinColor":"#123456"}'; }
-uc_dene "ajax save_avatar_colors" "SELECT COALESCE(AvatarVerisi,'NULL') FROM Kullanicilar WHERE KullaniciID=$U_ID" a_renk
+if [[ "$MOD" == "yeni" ]]; then
+    a_renk() { ajax_post "$1" --data-urlencode "save_avatar_options=1" --data-urlencode 'secenekler={"ten":3,"sac":2}'; }
+    uc_dene "ajax save_avatar_options" "SELECT COALESCE(AvatarVerisi,'NULL') FROM Kullanicilar WHERE KullaniciID=$U_ID" a_renk
+else
+    a_renk() { ajax_post "$1" --data-urlencode "save_avatar_colors=1" --data-urlencode 'colors={"skinColor":"#123456"}'; }
+    uc_dene "ajax save_avatar_colors" "SELECT COALESCE(AvatarVerisi,'NULL') FROM Kullanicilar WHERE KullaniciID=$U_ID" a_renk
+fi
 a_al()      { ajax_post "$1" -d "buy_item_id=1"; }
 uc_dene "ajax buy_item_id" "SELECT COUNT(*) FROM KullaniciEnvanteri WHERE KullaniciID=$U_ID" a_al
 a_kusan()   { ajax_post "$1" -d "equip_item_id=1"; }
